@@ -2988,6 +2988,27 @@
     "colStream": "Stream",
     "loading": "Loading…",
     "empty": "No samples yet — they are recorded automatically after a request",
-    "emptyDisabled": "TPS recording is disabled"
+    "emptyDisabled": "TPS recording is disabled",
+    "rangeLabel": "Time range",
+    "range1h": "Last 1h",
+    "range24h": "Last 24h",
+    "range7d": "Last 7d",
+    "rangeToday": "Today",
+    "rangeAll": "All",
+    "concurrencyTitle": "Concurrency",
+    "currentConcurrency": "Current",
+    "peakConcurrency": "Peak",
+    "resetPeak": "Reset peak",
+    "resetPeakToast": "Peak reset",
+    "resetPeakError": "Reset failed",
+    "concurrencyHint": "Live count of in-flight requests while the proxy is running",
+    "providerBreakdown": "By Provider",
+    "modelBreakdown": "By Model",
+    "colDisplayName": "Name",
+    "colSampleCount": "Samples",
+    "colAvgTps": "Avg",
+    "colMaxTps": "Peak",
+    "colTotalOutput": "Output Tokens",
+    "noBreakdown": "No samples in this range"
   }
 }

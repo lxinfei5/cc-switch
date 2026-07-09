@@ -2988,6 +2988,27 @@
     "colStream": "ストリーム",
     "loading": "読み込み中…",
     "empty": "サンプルなし。リクエスト後に自動記録されます",
-    "emptyDisabled": "TPS 記録は無効です"
+    "emptyDisabled": "TPS 記録は無効です",
+    "rangeLabel": "時間範囲",
+    "range1h": "直近1時間",
+    "range24h": "直近24時間",
+    "range7d": "直近7日",
+    "rangeToday": "今日",
+    "rangeAll": "すべて",
+    "concurrencyTitle": "同時接続数",
+    "currentConcurrency": "現在",
+    "peakConcurrency": "ピーク",
+    "resetPeak": "ピークをリセット",
+    "resetPeakToast": "ピークをリセットしました",
+    "resetPeakError": "リセット失敗",
+    "concurrencyHint": "プロキシ稼働中の処理中リクエスト数をリアルタイム集計",
+    "providerBreakdown": "プロバイダー別",
+    "modelBreakdown": "モデル別",
+    "colDisplayName": "名前",
+    "colSampleCount": "サンプル数",
+    "colAvgTps": "平均",
+    "colMaxTps": "ピーク",
+    "colTotalOutput": "出力トークン",
+    "noBreakdown": "この範囲にサンプルはありません"
   }
 }

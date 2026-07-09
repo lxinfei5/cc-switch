@@ -2960,6 +2960,27 @@
     "colStream": "串流",
     "loading": "載入中…",
     "empty": "暫無樣本，發起一次請求後會自動記錄",
-    "emptyDisabled": "TPS 記錄已關閉"
+    "emptyDisabled": "TPS 記錄已關閉",
+    "rangeLabel": "時間範圍",
+    "range1h": "近1小時",
+    "range24h": "近24小時",
+    "range7d": "近7天",
+    "rangeToday": "今天",
+    "rangeAll": "全部",
+    "concurrencyTitle": "並發監控",
+    "currentConcurrency": "目前並發",
+    "peakConcurrency": "峰值並發",
+    "resetPeak": "重置峰值",
+    "resetPeakToast": "峰值已重置",
+    "resetPeakError": "重置失敗",
+    "concurrencyHint": "代理運行時即時統計在途請求數",
+    "providerBreakdown": "依 Provider 分組",
+    "modelBreakdown": "依 Model 分組",
+    "colDisplayName": "名稱",
+    "colSampleCount": "樣本數",
+    "colAvgTps": "平均",
+    "colMaxTps": "峰值",
+    "colTotalOutput": "輸出Tokens",
+    "noBreakdown": "該範圍內暫無樣本"
   }
 }

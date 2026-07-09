@@ -1,7 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Activity, Gauge, Trash2, Zap } from "lucide-react";
+import { Activity, Gauge, Trash2, Zap, RotateCcw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +18,15 @@ import {
   useTpsSummary,
   useTpsRecent,
   useTpsTrend,
+  useTpsBreakdown,
   useTpsEnabled,
   useSetTpsEnabled,
   useClearTpsSamples,
+  useConcurrency,
+  useResetConcurrencyPeak,
 } from "@/lib/query/tps";
 import { useTpsEventBridge } from "@/hooks/useTpsEventBridge";
+import type { TpsGroupStats } from "@/lib/api/tps";
 import { cn } from "@/lib/utils";
 
 /**
@@ -31,24 +35,96 @@ import { cn } from "@/lib/utils";
  * 自包含：所有数据通过 `@/lib/query/tps` 的 hook 拉取，事件通过
  * `useTpsEventBridge` 实时刷新。移除本组件只需删掉 App.tsx 里的 view 分支与
  * nav 按钮，不影响其它功能。
+ *
+ * 区块：并发（实时）→ 时间范围选择 → TPS 汇总 → Provider/Model 分组 → 趋势 → 最近样本
  */
+
+type RangePreset = "1h" | "24h" | "7d" | "today" | "all";
+
+const RANGE_PRESETS: {
+  value: RangePreset;
+  labelKey: string;
+  defaultLabel: string;
+}[] = [
+  { value: "1h", labelKey: "tpsMonitor.range1h", defaultLabel: "近1小时" },
+  { value: "24h", labelKey: "tpsMonitor.range24h", defaultLabel: "近24小时" },
+  { value: "7d", labelKey: "tpsMonitor.range7d", defaultLabel: "近7天" },
+  { value: "today", labelKey: "tpsMonitor.rangeToday", defaultLabel: "今天" },
+  { value: "all", labelKey: "tpsMonitor.rangeAll", defaultLabel: "全部" },
+];
+
+/** 计算某 preset 的起始 unix 秒（undefined = 不限） */
+function rangeStartSeconds(
+  preset: RangePreset,
+  nowSec: number,
+): number | undefined {
+  switch (preset) {
+    case "1h":
+      return nowSec - 3600;
+    case "24h":
+      return nowSec - 86_400;
+    case "7d":
+      return nowSec - 7 * 86_400;
+    case "today": {
+      const d = new Date(nowSec * 1000);
+      d.setHours(0, 0, 0, 0);
+      return Math.floor(d.getTime() / 1000);
+    }
+    case "all":
+      return undefined;
+  }
+}
+
 export default function TpsMonitorPanel() {
   const { t } = useTranslation();
   useTpsEventBridge();
+
+  const [rangePreset, setRangePreset] = useState<RangePreset>("24h");
+  // 滑动窗口：每分钟更新一次基准 now，让 "近N" 范围自然前移（query key 随之变化）
+  const [nowBucket, setNowBucket] = useState(() =>
+    Math.floor(Date.now() / 60_000),
+  );
+  useEffect(() => {
+    const id = setInterval(
+      () => setNowBucket(Math.floor(Date.now() / 60_000)),
+      60_000,
+    );
+    return () => clearInterval(id);
+  }, []);
+
+  const filters = useMemo(() => {
+    const start = rangeStartSeconds(rangePreset, nowBucket * 60);
+    return start === undefined ? {} : { startDate: start };
+  }, [rangePreset, nowBucket]);
 
   const { data: enabledData } = useTpsEnabled();
   const enabled = enabledData ?? true;
   const setEnabledMutation = useSetTpsEnabled();
   const clearMutation = useClearTpsSamples();
 
-  const { data: summary, isLoading: summaryLoading } = useTpsSummary({});
-  const { data: trend } = useTpsTrend({}, 48);
+  const { data: summary, isLoading: summaryLoading } = useTpsSummary(filters);
+  const { data: trend } = useTpsTrend(filters, 48);
   const { data: recent, isLoading: recentLoading } = useTpsRecent({}, 50);
+  const providerBreakdown = useTpsBreakdown(filters, "provider");
+  const modelBreakdown = useTpsBreakdown(filters, "model");
+
+  // 并发（独立特性，2 秒轮询）
+  const { data: concurrency } = useConcurrency();
+  const resetPeakMutation = useResetConcurrencyPeak();
 
   const maxTrendTps = useMemo(() => {
     if (!trend || trend.length === 0) return 0;
     return Math.max(...trend.map((p) => p.avgTps), 0.0001);
   }, [trend]);
+
+  const maxConcurrency = useMemo(() => {
+    if (!concurrency || concurrency.history.length === 0) return 1;
+    return Math.max(
+      ...concurrency.history.map((s) => s.count),
+      concurrency?.current ?? 0,
+      1,
+    );
+  }, [concurrency]);
 
   const handleToggle = async (next: boolean) => {
     try {
@@ -59,7 +135,6 @@ export default function TpsMonitorPanel() {
           : t("tpsMonitor.toggleToastOff", { defaultValue: "TPS 记录已关闭" }),
       );
     } catch {
-      // mutation 失败时 hook 不弹 toast，这里兜底
       toast.error(t("tpsMonitor.toggleError", { defaultValue: "切换失败" }));
     }
   };
@@ -72,6 +147,17 @@ export default function TpsMonitorPanel() {
       );
     } catch {
       toast.error(t("tpsMonitor.clearError", { defaultValue: "清空失败" }));
+    }
+  };
+
+  const handleResetPeak = async () => {
+    try {
+      await resetPeakMutation.mutateAsync();
+      toast.success(
+        t("tpsMonitor.resetPeakToast", { defaultValue: "峰值已重置" }),
+      );
+    } catch {
+      toast.error(t("tpsMonitor.resetPeakError", { defaultValue: "重置失败" }));
     }
   };
 
@@ -111,7 +197,88 @@ export default function TpsMonitorPanel() {
         </div>
       </div>
 
-      {/* 汇总卡片 */}
+      {/* 并发监控（实时） */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-500" />
+              {t("tpsMonitor.concurrencyTitle", { defaultValue: "并发监控" })}
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetPeak}
+              disabled={resetPeakMutation.isPending}
+              className="gap-1.5 h-7"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              {t("tpsMonitor.resetPeak", { defaultValue: "重置峰值" })}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <ConcurrencyStat
+              label={t("tpsMonitor.currentConcurrency", {
+                defaultValue: "当前并发",
+              })}
+              value={concurrency?.current ?? 0}
+              accent="emerald"
+            />
+            <ConcurrencyStat
+              label={t("tpsMonitor.peakConcurrency", {
+                defaultValue: "峰值并发",
+              })}
+              value={concurrency?.peak ?? 0}
+              accent="blue"
+            />
+          </div>
+          {concurrency && concurrency.history.length > 1 ? (
+            <div className="flex items-end gap-0.5 h-16">
+              {concurrency.history.map((s, i) => {
+                const h = Math.max(2, (s.count / maxConcurrency) * 100);
+                return (
+                  <div
+                    key={`${s.ts}-${i}`}
+                    className="flex-1 min-w-[2px] bg-emerald-500/60 dark:bg-emerald-400/60 rounded-t-sm"
+                    style={{ height: `${h}%` }}
+                    title={`${s.count}`}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground text-center py-2">
+              {t("tpsMonitor.concurrencyHint", {
+                defaultValue: "代理运行时实时统计在途请求数",
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 时间范围选择 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-muted-foreground">
+          {t("tpsMonitor.rangeLabel", { defaultValue: "时间范围" })}
+        </span>
+        <div className="flex items-center gap-1">
+          {RANGE_PRESETS.map((p) => (
+            <Button
+              key={p.value}
+              variant={rangePreset === p.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setRangePreset(p.value)}
+              className="h-7"
+            >
+              {t(p.labelKey, { defaultValue: p.defaultLabel })}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* TPS 汇总卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard
           icon={<Activity className="w-4 h-4" />}
@@ -143,6 +310,34 @@ export default function TpsMonitorPanel() {
           label={t("tpsMonitor.sampleCount", { defaultValue: "样本数" })}
           value={summary ? summary.sampleCount.toLocaleString() : "—"}
           loading={summaryLoading}
+        />
+      </div>
+
+      {/* Provider / Model 分组 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <BreakdownCard
+          title={t("tpsMonitor.providerBreakdown", {
+            defaultValue: "按 Provider 分组",
+          })}
+          rows={providerBreakdown.data}
+          loading={providerBreakdown.isLoading}
+          showApp
+          emptyText={t("tpsMonitor.noBreakdown", {
+            defaultValue: "该范围内暂无样本",
+          })}
+          t={t}
+        />
+        <BreakdownCard
+          title={t("tpsMonitor.modelBreakdown", {
+            defaultValue: "按 Model 分组",
+          })}
+          rows={modelBreakdown.data}
+          loading={modelBreakdown.isLoading}
+          showApp={false}
+          emptyText={t("tpsMonitor.noBreakdown", {
+            defaultValue: "该范围内暂无样本",
+          })}
+          t={t}
         />
       </div>
 
@@ -280,6 +475,8 @@ export default function TpsMonitorPanel() {
   );
 }
 
+// ── 子组件 ──────────────────────────────────────────────────────────────────
+
 interface StatCardProps {
   icon?: React.ReactNode;
   label: string;
@@ -304,6 +501,129 @@ function StatCard({ icon, label, value, unit, loading }: StatCardProps) {
             <span className="text-xs text-muted-foreground">{unit}</span>
           )}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface ConcurrencyStatProps {
+  label: string;
+  value: number;
+  accent: "emerald" | "blue";
+}
+
+function ConcurrencyStat({ label, value, accent }: ConcurrencyStatProps) {
+  return (
+    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+      <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
+      <div
+        className={cn(
+          "text-2xl font-semibold font-mono",
+          accent === "emerald" ? "text-emerald-500" : "text-blue-500",
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+interface BreakdownCardProps {
+  title: string;
+  rows: TpsGroupStats[] | undefined;
+  loading: boolean;
+  showApp: boolean;
+  emptyText: string;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}
+
+function BreakdownCard({
+  title,
+  rows,
+  loading,
+  showApp,
+  emptyText,
+  t,
+}: BreakdownCardProps) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {rows && rows.length > 0 ? (
+          <div className="max-h-72 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    {t("tpsMonitor.colDisplayName", { defaultValue: "名称" })}
+                  </TableHead>
+                  {showApp && (
+                    <TableHead>
+                      {t("tpsMonitor.colApp", { defaultValue: "应用" })}
+                    </TableHead>
+                  )}
+                  <TableHead className="text-right">
+                    {t("tpsMonitor.colSampleCount", { defaultValue: "样本数" })}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("tpsMonitor.colAvgTps", { defaultValue: "平均" })}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("tpsMonitor.colMaxTps", { defaultValue: "峰值" })}
+                  </TableHead>
+                  <TableHead className="text-right">P95</TableHead>
+                  <TableHead className="text-right">
+                    {t("tpsMonitor.colTotalOutput", {
+                      defaultValue: "输出Tokens",
+                    })}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={`${r.appType ?? ""}:${r.key}`}>
+                    <TableCell
+                      className="font-mono text-xs max-w-[180px] truncate"
+                      title={r.key}
+                    >
+                      {r.displayName ?? r.key}
+                    </TableCell>
+                    {showApp && (
+                      <TableCell className="text-xs">
+                        {r.appType ?? "—"}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right font-mono text-xs">
+                      {r.sampleCount.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs text-blue-500">
+                      {r.avgTps.toFixed(1)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs text-emerald-500">
+                      {r.maxTps.toFixed(1)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">
+                      {r.p95Tps.toFixed(1)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">
+                      {r.totalOutputTokens.toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : loading ? (
+          <div className="text-sm text-muted-foreground py-6 text-center">
+            {t("tpsMonitor.loading", { defaultValue: "加载中…" })}
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground py-6 text-center">
+            {emptyText}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -8,6 +8,7 @@ mod codex_config;
 mod codex_history_migration;
 mod codex_state_db;
 mod commands;
+mod concurrency;
 mod config;
 mod database;
 mod deeplink;
@@ -378,6 +379,10 @@ pub fn run() {
             // 本地定制：注入 AppHandle 给 TPS 事件推送模块（仅注册事件通道，
             // 不读 DB，可在数据库初始化之前调用）。
             tps::init(app.handle().clone());
+
+            // 本地定制：初始化并发监控跟踪器并启动 1 秒采样器。
+            // 跟踪器为进程级单例，代理 server 启动时通过 build_router 的中间件接入。
+            concurrency::init();
 
             // 初始化数据库
             let app_config_dir = crate::config::get_app_config_dir();
@@ -1417,10 +1422,14 @@ pub fn run() {
             commands::get_tps_summary,
             commands::get_tps_recent,
             commands::get_tps_trend,
+            commands::get_tps_breakdown,
             commands::clear_tps_samples,
             commands::count_tps_samples,
             commands::get_tps_enabled,
             commands::set_tps_enabled,
+            // 并发监控（本地定制）
+            commands::get_concurrency,
+            commands::reset_concurrency_peak,
             // Stream health check
             commands::stream_check_provider,
             commands::stream_check_all_providers,

@@ -4,7 +4,9 @@
 //! （开关/事件编排）。命令名注册到 `lib.rs` 的 `generate_handler!`。
 
 use crate::error::AppError;
-use crate::services::tps::{TpsFilters, TpsSample, TpsSummary, TpsTrendPoint};
+use crate::services::tps::{
+    TpsFilters, TpsGroupBy, TpsGroupStats, TpsSample, TpsSummary, TpsTrendPoint,
+};
 use crate::store::AppState;
 use crate::tps;
 use tauri::State;
@@ -36,6 +38,16 @@ pub fn get_tps_trend(
     buckets: Option<u32>,
 ) -> Result<Vec<TpsTrendPoint>, AppError> {
     state.db.get_tps_trend(&filters, buckets.unwrap_or(48))
+}
+
+/// 按 Provider 或 Model 分组聚合 TPS（按平均 TPS 倒序）
+#[tauri::command]
+pub fn get_tps_breakdown(
+    state: State<'_, AppState>,
+    filters: TpsFilters,
+    group_by: TpsGroupBy,
+) -> Result<Vec<TpsGroupStats>, AppError> {
+    state.db.get_tps_breakdown(&filters, group_by)
 }
 
 /// 清空 TPS 样本（filters 为空则清空全部），返回删除行数

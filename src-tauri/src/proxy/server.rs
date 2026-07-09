@@ -356,6 +356,11 @@ impl ProxyServer {
             .route("/gemini/v1/*path", any(handlers::handle_gemini))
             // 提高默认请求体大小限制（避免 413 Payload Too Large）
             .layer(DefaultBodyLimit::max(200 * 1024 * 1024))
+            // 本地定制：并发监控中间件。统计在途请求数（请求进入 +1，响应体
+            // 消费/丢弃时 -1）。移除并发功能只需删掉这一行 .layer(...)。
+            .layer(axum::middleware::from_fn(
+                crate::concurrency::concurrency_middleware,
+            ))
             .with_state(self.state.clone())
     }
 

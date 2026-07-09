@@ -2988,6 +2988,27 @@
     "colStream": "流式",
     "loading": "加载中…",
     "empty": "暂无样本，发起一次请求后会自动记录",
-    "emptyDisabled": "TPS 记录已关闭"
+    "emptyDisabled": "TPS 记录已关闭",
+    "rangeLabel": "时间范围",
+    "range1h": "近1小时",
+    "range24h": "近24小时",
+    "range7d": "近7天",
+    "rangeToday": "今天",
+    "rangeAll": "全部",
+    "concurrencyTitle": "并发监控",
+    "currentConcurrency": "当前并发",
+    "peakConcurrency": "峰值并发",
+    "resetPeak": "重置峰值",
+    "resetPeakToast": "峰值已重置",
+    "resetPeakError": "重置失败",
+    "concurrencyHint": "代理运行时实时统计在途请求数",
+    "providerBreakdown": "按 Provider 分组",
+    "modelBreakdown": "按 Model 分组",
+    "colDisplayName": "名称",
+    "colSampleCount": "样本数",
+    "colAvgTps": "平均",
+    "colMaxTps": "峰值",
+    "colTotalOutput": "输出Tokens",
+    "noBreakdown": "该范围内暂无样本"
   }
 }

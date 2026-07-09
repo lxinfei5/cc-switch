@@ -26,6 +26,7 @@ import {
   Cpu,
   LayoutDashboard,
   Gauge,
+  ArrowLeftRight,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Provider, VisibleApps } from "@/types";
@@ -1202,13 +1203,26 @@ function App() {
                     target="_blank"
                     rel="noreferrer"
                     className={cn(
-                      "text-xl font-semibold transition-colors",
+                      "group inline-flex items-center gap-2 rounded-xl px-2.5 py-1",
+                      "glass-card transition-all duration-200 hover:-translate-y-px",
                       isProxyRunning && isCurrentAppTakeoverActive
-                        ? "text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300"
-                        : "text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300",
+                        ? "shadow-[0_4px_18px_-6px_rgba(16,185,129,0.45)] hover:shadow-[0_8px_24px_-6px_rgba(16,185,129,0.6)]"
+                        : "shadow-[0_4px_18px_-6px_rgba(10,132,255,0.40)] hover:shadow-[0_8px_24px_-6px_rgba(10,132,255,0.55)]",
                     )}
                   >
-                    CC Switch
+                    <span
+                      className={cn(
+                        "inline-flex h-6 w-6 items-center justify-center rounded-md text-white shadow-sm transition-colors",
+                        isProxyRunning && isCurrentAppTakeoverActive
+                          ? "bg-gradient-to-br from-emerald-400 to-emerald-600"
+                          : "bg-gradient-to-br from-blue-400 to-blue-600",
+                      )}
+                    >
+                      <ArrowLeftRight className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="text-xl font-semibold tracking-tight text-foreground">
+                      CC Switch
+                    </span>
                   </a>
                 </div>
                 <Button

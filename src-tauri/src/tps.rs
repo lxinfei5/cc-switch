@@ -156,6 +156,3 @@ fn notify_tps_recorded() {
         }
     });
 }
-
-// 重新导出查询层类型，方便 commands 模块使用。
-pub use crate::services::tps::{TpsFilters, TpsSample, TpsSummary, TpsTrendPoint};

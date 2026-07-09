@@ -33,8 +33,8 @@ mod session_manager;
 mod settings;
 mod store;
 
-mod tray;
 mod tps;
+mod tray;
 mod usage_events;
 mod usage_script;
 

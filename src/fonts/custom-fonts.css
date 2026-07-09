@@ -16,58 +16,65 @@
  *    西文 fallback 为系统无衬线栈，保证跨平台都有合理外观。
  *  - 代码/等宽字体优先 Monaco（macOS 自带），fallback Cascadia / JetBrains /
  *    Menlo / Consolas / ui-monospace，覆盖 Windows/Linux。
- *  - 通过 @layer utilities 重定义 Tailwind 的 `.font-sans` / `.font-mono`
- *    工具类（本文件在 index.css 之后加载，同层同特异性下后者胜出），同时直接
- *    设置 `html` 与 `code/pre/kbd/samp` 选择器，确保所有 shadcn 组件、内联代码、
- *    代码块统一生效。
+ *  - 本文件**不使用** `@layer`：Tailwind v3 的 PostCSS 插件要求 `@layer` 出现在
+ *    含有 `@tailwind` 指令的同一文件中（只有 index.css 有），独立文件里写
+ *    `@layer base/utilities` 会导致构建报错。改用普通 CSS 规则：本文件在
+ *    index.css 之后加载，等特异性下后加载者胜出，足以覆盖上游 `html{@apply font-sans}`
+ *    与 Tailwind 生成的 `.font-sans` / `.font-mono` 工具类，所有 shadcn 组件、
+ *    内联代码、代码块统一生效。
  * ──────────────────────────────────────────────────────────────────────────
  */
 
 /* UI / 正文：微软雅黑优先，中文与西文各带合理 fallback */
-@layer base {
-  html {
-    font-family:
-      "Microsoft YaHei",
-      "微软雅黑",
-      "PingFang SC",
-      "Hiragino Sans GB",
-      "Noto Sans CJK SC",
-      "Source Han Sans SC",
-      "Segoe UI",
-      Roboto,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Helvetica Neue",
-      Arial,
-      sans-serif;
-  }
+html {
+  font-family:
+    "Microsoft YaHei",
+    "微软雅黑",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans CJK SC",
+    "Source Han Sans SC",
+    "Segoe UI",
+    Roboto,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
 }
 
-/* 代码 / 等宽：Monaco 优先，跨平台 fallback */
-@layer utilities {
-  .font-sans {
-    font-family:
-      "Microsoft YaHei",
-      "微软雅黑",
-      "PingFang SC",
-      "Hiragino Sans GB",
-      "Noto Sans CJK SC",
-      "Source Han Sans SC",
-      "Segoe UI",
-      Roboto,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Helvetica Neue",
-      Arial,
-      sans-serif;
-  }
+/* UI 工具类：覆盖 Tailwind 生成的 .font-sans（后加载胜出） */
+.font-sans {
+  font-family:
+    "Microsoft YaHei",
+    "微软雅黑",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans CJK SC",
+    "Source Han Sans SC",
+    "Segoe UI",
+    Roboto,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}
 
-  .font-mono {
-    font-family:
-      Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas,
-      "Liberation Mono", "DejaVu Sans Mono", ui-monospace, "SFMono-Regular",
-      monospace;
-  }
+/* 代码 / 等宽：Monaco 优先，跨平台 fallback，覆盖 Tailwind .font-mono 工具类 */
+.font-mono {
+  font-family:
+    Monaco,
+    "Cascadia Code",
+    "JetBrains Mono",
+    "SF Mono",
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    "DejaVu Sans Mono",
+    ui-monospace,
+    "SFMono-Regular",
+    monospace;
 }
 
 /* 兜底：直接命中代码相关元素，覆盖未走 font-mono 工具类的内联代码 */
@@ -77,7 +84,15 @@ kbd,
 samp,
 tt {
   font-family:
-    Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas,
-    "Liberation Mono", "DejaVu Sans Mono", ui-monospace, "SFMono-Regular",
+    Monaco,
+    "Cascadia Code",
+    "JetBrains Mono",
+    "SF Mono",
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    "DejaVu Sans Mono",
+    ui-monospace,
+    "SFMono-Regular",
     monospace;
 }

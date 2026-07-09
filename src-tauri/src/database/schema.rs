@@ -1384,7 +1384,9 @@ impl Database {
             "CREATE INDEX IF NOT EXISTS idx_tps_samples_created_at ON tps_samples(created_at DESC)",
             [],
         )
-        .map_err(|e| AppError::Database(format!("v12 -> v13 创建 tps_samples 时间索引失败: {e}")))?;
+        .map_err(|e| {
+            AppError::Database(format!("v12 -> v13 创建 tps_samples 时间索引失败: {e}"))
+        })?;
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_tps_samples_app_created ON tps_samples(app_type, created_at DESC)",
             [],

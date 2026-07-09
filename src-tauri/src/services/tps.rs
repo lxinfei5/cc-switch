@@ -7,6 +7,7 @@
 //! TPS 定义：output_tokens / generation_seconds。
 //! - 流式且有 first_token_ms：generation = duration_ms - first_token_ms（首 token 之后的纯生成耗时）
 //! - 否则：generation = duration_ms（或 latency 兜底）
+//!
 //! 在写入侧（`tps::on_request_logged`）计算好 `tps` 后落库，查询侧只读。
 
 use crate::database::{lock_conn, Database};

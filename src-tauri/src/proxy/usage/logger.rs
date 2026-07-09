@@ -48,8 +48,6 @@ impl<'a> UsageLogger<'a> {
 
     /// 记录成功的请求
     pub fn log_request(&self, log: &RequestLog) -> Result<(), AppError> {
-        let conn = crate::database::lock_conn!(self.db.conn);
-
         let (input_cost, output_cost, cache_read_cost, cache_creation_cost, total_cost) =
             if let Some(cost) = &log.cost {
                 (
@@ -71,7 +69,10 @@ impl<'a> UsageLogger<'a> {
 
         let created_at = chrono::Utc::now().timestamp();
 
-        conn.execute(
+        {
+            let conn = crate::database::lock_conn!(self.db.conn);
+
+            conn.execute(
             "INSERT OR REPLACE INTO proxy_request_logs (
                 request_id, provider_id, app_type, model, request_model, pricing_model,
                 input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
@@ -107,9 +108,18 @@ impl<'a> UsageLogger<'a> {
             ],
         )
         .map_err(|e| AppError::Database(format!("记录请求日志失败: {e}")))?;
+        } // 释放连接锁：避免下方 TPS 写入二次加锁导致死锁
 
         // 通知前端使用统计有更新（200ms 防抖合并，不阻塞写入路径）
         crate::usage_events::notify_log_recorded();
+
+        // 本地定制（fork 专用）：可插拔 TPS 采样。
+        // 从已落库的请求字段派生 tokens/sec 写入 tps_samples，失败仅记录 warn，
+        // 绝不影响计费主路径；可通过前端 set_tps_enabled 命令关闭。
+        // 移除该功能：删掉下面这 4 行即可（services/tps.rs / tps.rs / commands/tps.rs 同步删除）。
+        if let Err(e) = crate::tps::on_request_logged(self.db, log) {
+            log::warn!("[TPS] record sample failed: {e}");
+        }
 
         Ok(())
     }

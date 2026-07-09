@@ -219,6 +219,39 @@ impl Database {
         .map_err(|e| AppError::Database(e.to_string()))?;
         Self::create_request_logs_usage_indexes_if_supported(conn)?;
 
+        // 10b. TPS Samples 表（本地定制：TPS 监控&记录）
+        // 每条流式/非流式请求完成时由 logger 写入一行样本，tps = output_tokens /
+        // generation_seconds。与 proxy_request_logs 解耦——观测数据独立可删，
+        // 不影响成本核算主表。request_id 与 proxy_request_logs 对应（不强外键，
+        // 避免写入路径上的额外约束开销）。
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS tps_samples (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                request_id TEXT NOT NULL,
+                app_type TEXT NOT NULL,
+                provider_id TEXT NOT NULL,
+                model TEXT NOT NULL,
+                output_tokens INTEGER NOT NULL DEFAULT 0,
+                first_token_ms INTEGER,
+                duration_ms INTEGER,
+                is_streaming INTEGER NOT NULL DEFAULT 0,
+                tps REAL NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )",
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tps_samples_created_at ON tps_samples(created_at DESC)",
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tps_samples_app_created ON tps_samples(app_type, created_at DESC)",
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
         // 11. Model Pricing 表
         conn.execute(
             "CREATE TABLE IF NOT EXISTS model_pricing (
@@ -477,6 +510,11 @@ impl Database {
                         log::info!("迁移数据库从 v11 到 v12（添加项目 Profiles 表）");
                         Self::migrate_v11_to_v12(conn)?;
                         Self::set_user_version(conn, 12)?;
+                    }
+                    12 => {
+                        log::info!("迁移数据库从 v12 到 v13（添加 TPS 监控样本表）");
+                        Self::migrate_v12_to_v13(conn)?;
+                        Self::set_user_version(conn, 13)?;
                     }
                     _ => {
                         return Err(AppError::Database(format!(
@@ -1319,6 +1357,39 @@ impl Database {
             [],
         )
         .map_err(|e| AppError::Database(format!("v11 -> v12 创建 profiles 表失败: {e}")))?;
+        Ok(())
+    }
+
+    /// v12 -> v13 迁移：添加 TPS 监控样本表（本地定制）
+    /// 与 create_tables_on_conn 中的建表语句保持一致（IF NOT EXISTS 保证幂等）。
+    fn migrate_v12_to_v13(conn: &Connection) -> Result<(), AppError> {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS tps_samples (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                request_id TEXT NOT NULL,
+                app_type TEXT NOT NULL,
+                provider_id TEXT NOT NULL,
+                model TEXT NOT NULL,
+                output_tokens INTEGER NOT NULL DEFAULT 0,
+                first_token_ms INTEGER,
+                duration_ms INTEGER,
+                is_streaming INTEGER NOT NULL DEFAULT 0,
+                tps REAL NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("v12 -> v13 创建 tps_samples 表失败: {e}")))?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tps_samples_created_at ON tps_samples(created_at DESC)",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("v12 -> v13 创建 tps_samples 时间索引失败: {e}")))?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tps_samples_app_created ON tps_samples(app_type, created_at DESC)",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("v12 -> v13 创建 tps_samples 应用索引失败: {e}")))?;
         Ok(())
     }
 

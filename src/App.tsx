@@ -25,6 +25,7 @@ import {
   Shield,
   Cpu,
   LayoutDashboard,
+  Gauge,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Provider, VisibleApps } from "@/types";
@@ -95,6 +96,7 @@ import ToolsPanel from "@/components/openclaw/ToolsPanel";
 import AgentsDefaultsPanel from "@/components/openclaw/AgentsDefaultsPanel";
 import OpenClawHealthBanner from "@/components/openclaw/OpenClawHealthBanner";
 import HermesMemoryPanel from "@/components/hermes/HermesMemoryPanel";
+import TpsMonitorPanel from "@/components/tps/TpsMonitorPanel";
 
 type View =
   | "providers"
@@ -110,7 +112,8 @@ type View =
   | "openclawEnv"
   | "openclawTools"
   | "openclawAgents"
-  | "hermesMemory";
+  | "hermesMemory"
+  | "tpsMonitor";
 
 interface SyncStatusUpdatedPayload {
   source?: string;
@@ -156,6 +159,7 @@ const VALID_VIEWS: View[] = [
   "openclawTools",
   "openclawAgents",
   "hermesMemory",
+  "tpsMonitor",
 ];
 
 const getInitialView = (): View => {
@@ -909,6 +913,8 @@ function App() {
           );
         case "hermesMemory":
           return <HermesMemoryPanel />;
+        case "tpsMonitor":
+          return <TpsMonitorPanel />;
         case "skills":
           return (
             <UnifiedSkillsPanel
@@ -1184,6 +1190,8 @@ function App() {
                   {currentView === "openclawAgents" &&
                     t("openclaw.agents.title")}
                   {currentView === "hermesMemory" && t("hermes.memory.title")}
+                  {currentView === "tpsMonitor" &&
+                    t("tpsMonitor.title", { defaultValue: "TPS 监控" })}
                 </h1>
               </div>
             ) : (
@@ -1548,6 +1556,18 @@ function App() {
                                 title={t("mcp.title")}
                               >
                                 <McpIcon size={16} />
+                              </Button>
+                              {/* 本地定制：TPS 监控入口 */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentView("tpsMonitor")}
+                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                title={t("tpsMonitor.title", {
+                                  defaultValue: "TPS 监控",
+                                })}
+                              >
+                                <Gauge className="w-4 h-4" />
                               </Button>
                             </>
                           )}

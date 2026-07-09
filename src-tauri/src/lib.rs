@@ -34,6 +34,7 @@ mod settings;
 mod store;
 
 mod tray;
+mod tps;
 mod usage_events;
 mod usage_script;
 
@@ -374,6 +375,10 @@ pub fn run() {
             // 放在日志系统初始化之后，确保 init 的日志能正常输出。
             usage_events::init(app.handle().clone());
 
+            // 本地定制：注入 AppHandle 给 TPS 事件推送模块（仅注册事件通道，
+            // 不读 DB，可在数据库初始化之前调用）。
+            tps::init(app.handle().clone());
+
             // 初始化数据库
             let app_config_dir = crate::config::get_app_config_dir();
             let db_path = app_config_dir.join("cc-switch.db");
@@ -491,6 +496,9 @@ pub fn run() {
 
             // 设置 AppHandle 用于代理故障转移时的 UI 更新
             app_state.proxy_service.set_app_handle(app.handle().clone());
+
+            // 本地定制：从 settings 表读回 TPS 监控开关（默认开启）。
+            tps::load_enabled(&app_state.db);
 
             // ============================================================
             // 按表独立判断的导入逻辑（各类数据独立检查，互不影响）
@@ -1405,6 +1413,14 @@ pub fn run() {
             // Session usage sync
             commands::sync_session_usage,
             commands::get_usage_data_sources,
+            // TPS 监控 & 记录（本地定制）
+            commands::get_tps_summary,
+            commands::get_tps_recent,
+            commands::get_tps_trend,
+            commands::clear_tps_samples,
+            commands::count_tps_samples,
+            commands::get_tps_enabled,
+            commands::set_tps_enabled,
             // Stream health check
             commands::stream_check_provider,
             commands::stream_check_all_providers,

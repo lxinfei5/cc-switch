@@ -1,0 +1,83 @@
+/*
+ * ──────────────────────────────────────────────────────────────────────────
+ *  可插拔全局字体覆盖：Monaco + 微软雅黑
+ *  Pluggable global font override — Monaco (code/mono) + 微软雅黑 (UI/CJK)
+ * ──────────────────────────────────────────────────────────────────────────
+ *
+ *  这是从上游 fork 出来的本地定制。设计目标：**不改动上游的 index.css 与
+ *  tailwind.config.cjs**，全部字体替换集中在本文件，仅在 main.tsx 中追加一行
+ *  `import "./fonts/custom-fonts.css";`（位于 `./index.css` 之后）。这样在
+ *  同步上游 (git merge upstream/main) 时，字体相关的改动几乎零冲突。
+ *
+ *  想恢复上游字体：注释掉 main.tsx 里的这一行 import 即可，本文件可保留或删除。
+ *
+ *  说明：
+ *  - UI 字体优先「微软雅黑 / Microsoft YaHei」，中文 fallback 为苹方等系统字体，
+ *    西文 fallback 为系统无衬线栈，保证跨平台都有合理外观。
+ *  - 代码/等宽字体优先 Monaco（macOS 自带），fallback Cascadia / JetBrains /
+ *    Menlo / Consolas / ui-monospace，覆盖 Windows/Linux。
+ *  - 通过 @layer utilities 重定义 Tailwind 的 `.font-sans` / `.font-mono`
+ *    工具类（本文件在 index.css 之后加载，同层同特异性下后者胜出），同时直接
+ *    设置 `html` 与 `code/pre/kbd/samp` 选择器，确保所有 shadcn 组件、内联代码、
+ *    代码块统一生效。
+ * ──────────────────────────────────────────────────────────────────────────
+ */
+
+/* UI / 正文：微软雅黑优先，中文与西文各带合理 fallback */
+@layer base {
+  html {
+    font-family:
+      "Microsoft YaHei",
+      "微软雅黑",
+      "PingFang SC",
+      "Hiragino Sans GB",
+      "Noto Sans CJK SC",
+      "Source Han Sans SC",
+      "Segoe UI",
+      Roboto,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+  }
+}
+
+/* 代码 / 等宽：Monaco 优先，跨平台 fallback */
+@layer utilities {
+  .font-sans {
+    font-family:
+      "Microsoft YaHei",
+      "微软雅黑",
+      "PingFang SC",
+      "Hiragino Sans GB",
+      "Noto Sans CJK SC",
+      "Source Han Sans SC",
+      "Segoe UI",
+      Roboto,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+  }
+
+  .font-mono {
+    font-family:
+      Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas,
+      "Liberation Mono", "DejaVu Sans Mono", ui-monospace, "SFMono-Regular",
+      monospace;
+  }
+}
+
+/* 兜底：直接命中代码相关元素，覆盖未走 font-mono 工具类的内联代码 */
+code,
+pre,
+kbd,
+samp,
+tt {
+  font-family:
+    Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", "DejaVu Sans Mono", ui-monospace, "SFMono-Regular",
+    monospace;
+}

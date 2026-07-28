@@ -4,9 +4,10 @@
 //! TPS 属于「可观测性」而非「计费」，数据独立落在 `tps_samples` 表，
 //! 删除/清空不影响 `proxy_request_logs`。
 //!
-//! TPS 定义：output_tokens / generation_seconds。
-//! - 流式且有 first_token_ms：generation = duration_ms - first_token_ms（首 token 之后的纯生成耗时）
-//! - 否则：generation = duration_ms（或 latency 兜底）
+//! TPS 定义：output_tokens / generation_seconds（**单次请求**，不跨并发聚合）。
+//! - 流式且 first_token 可信：generation = duration_ms - first_token_ms
+//! - 否则：generation = duration_ms（latency 兜底；含 first_token 落在流末
+//!   usage 事件等「伪生成窗口」场景）
 //!
 //! 在写入侧（`tps::on_request_logged`）计算好 `tps` 后落库，查询侧只读。
 

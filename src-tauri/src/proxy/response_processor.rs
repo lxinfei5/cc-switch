@@ -382,8 +382,13 @@ impl SseUsageCollector {
             .unwrap_or(true)
     }
 
-    /// 标记首个被收集的 SSE 事件时间，沿用 `first_token_ms` 的既有近似语义。
-    async fn mark_first_collected_event_time(&self) {
+    /// 标记上游首字节 / 首个相关事件时间（`first_token_ms` 的计时点）。
+    ///
+    /// **必须**在真正的首字节到达时调用，而不是等 usage 过滤事件：
+    /// OpenAI / Codex / Gemini 的 `stream_event_filter` 只匹配流末尾的 usage
+    /// 事件，若用其作为 first_token，生成窗口会塌缩为几毫秒，TPS 被放大到
+    /// 数千（例如 8000 tok/s）。Claude 的 `message_start` 较早，受影响较轻。
+    pub async fn mark_first_byte(&self) {
         if self.inner.first_event_set.load(Ordering::Acquire) {
             return;
         }
@@ -394,9 +399,9 @@ impl SseUsageCollector {
         }
     }
 
-    /// 推送 SSE 事件
+    /// 推送 SSE 事件（usage 收集）。若首字节尚未标记，这里兜底一次。
     pub async fn push(&self, event: Value) {
-        self.mark_first_collected_event_time().await;
+        self.mark_first_byte().await;
         let mut events = self.inner.events.lock().await;
         events.push(event);
     }
@@ -737,6 +742,11 @@ pub fn create_logged_passthrough_stream(
                             "[{tag}] 已接收上游流式首包: bytes={}",
                             bytes.len()
                         );
+                        // 首字节 = 真正的 TTFT 近似。必须在 usage 事件过滤之前标记，
+                        // 否则 OpenAI/Codex/Gemini 会把 first_token 记到流末 usage 上。
+                        if let Some(c) = collector.as_ref() {
+                            c.mark_first_byte().await;
+                        }
                     }
                     is_first_chunk = false;
                     if inspect_sse_events {

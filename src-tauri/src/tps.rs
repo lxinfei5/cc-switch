@@ -79,31 +79,185 @@ pub fn set_enabled(db: &Database, enabled: bool) -> Result<(), AppError> {
     Ok(())
 }
 
-/// 从 RequestLog 派生 tokens/sec。
+/// 从 RequestLog 派生 tokens/sec（**单次请求**，不跨并发聚合）。
 ///
-/// - 流式且有 first_token_ms：generation = latency_ms - first_token_ms（纯生成耗时）
-/// - 其它：generation = latency_ms
-/// - output_tokens 为 0 或 generation <= 0：返回 0.0
+/// 公式：`output_tokens / generation_seconds`，其中 generation 优先取
+/// `latency_ms - first_token_ms`（首 token 之后的纯生成窗口）；不可信时退回
+/// 整段 `latency_ms`。
+///
+/// 重要语义：
+/// - 每条样本对应一次代理请求（一次对话 turn），并发请求各自独立采样，
+///   **绝不会**把多路并发的 token 加总到同一个 TPS 分母/分子上。
+/// - 历史上 `first_token_ms` 曾以「首个 usage 相关 SSE 事件」计时：OpenAI /
+///   Codex / Gemini 的 usage 事件通常在流末尾，生成窗口塌缩为几毫秒，
+///   会出现 8000+ tok/s 的离群值。现已在流式路径上改为「上游首字节」计时，
+///   并在此对残留的「伪生成窗口」做启发式兜底。
 fn compute_tps(log: &RequestLog) -> f64 {
     let output = log.usage.output_tokens;
     if output == 0 {
         return 0.0;
     }
-    let gen_ms: u64 = if log.is_streaming {
-        match log.first_token_ms {
-            // 首 token 时间缺失：用整段 latency 兜底（保守下界）。
-            None => log.latency_ms.max(1),
-            // 首 token 时间 >= 总耗时：生成耗时不可测（毫秒截断下首 token 紧贴
-            // 完成时可达）。视为无效测量返回 0.0，避免 .max(1) 把 0ms 生成
-            // 放大成 output * 1000 的离群值污染峰值/P95/趋势。
-            Some(ftt) if ftt >= log.latency_ms => return 0.0,
-            // 正常：生成耗时 = 总耗时 - 首 token 耗时（ftt < latency，保证 >= 1ms）。
-            Some(ftt) => log.latency_ms - ftt,
-        }
-    } else {
-        log.latency_ms.max(1)
-    };
+    let gen_ms = generation_ms(log.is_streaming, log.first_token_ms, log.latency_ms);
+    if gen_ms == 0 {
+        return 0.0;
+    }
     output as f64 * 1000.0 / gen_ms as f64
+}
+
+/// 计算用于 TPS 分母的生成窗口（毫秒）。
+///
+/// - 流式且 first_token 可信：`latency - first_token`
+/// - 否则：整段 `latency`（至少 1ms）
+///
+/// 「不可信」判定：first_token 缺失 / 越过总耗时 / 生成窗口相对总耗时过窄
+/// （典型症状：usage 事件被当成 first_token，落在流结束前几毫秒）。
+fn generation_ms(is_streaming: bool, first_token_ms: Option<u64>, latency_ms: u64) -> u64 {
+    let latency = latency_ms.max(1);
+    if !is_streaming {
+        return latency;
+    }
+    match first_token_ms {
+        None => latency,
+        // first_token >= 总耗时：测量无效，回退整段 latency（不再返回 0：
+        // 否则短响应会被丢弃，用户看到 tps=0 却无法用输出/耗时反推）。
+        Some(ftt) if ftt >= latency => latency,
+        Some(ftt) => {
+            let gen = latency - ftt;
+            if is_unreliable_generation_window(gen, latency) {
+                latency
+            } else {
+                gen
+            }
+        }
+    }
+}
+
+/// 判断 (latency - first_token) 是否像「伪生成窗口」而非真实生成耗时。
+///
+/// 真实模型生成几十/上百 token 极少在 <20ms 内完成；若同时总耗时较长，
+/// 几乎可以肯定 first_token 落在了流末 usage 事件上。
+fn is_unreliable_generation_window(gen_ms: u64, latency_ms: u64) -> bool {
+    // 绝对阈值：生成窗口极短且总耗时非瞬时
+    if gen_ms < 20 && latency_ms > 100 {
+        return true;
+    }
+    // 相对阈值：生成窗口 < 总耗时的 2%（且总耗时至少 500ms）
+    if latency_ms >= 500 && gen_ms.saturating_mul(50) < latency_ms {
+        return true;
+    }
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proxy::usage::parser::TokenUsage;
+
+    fn sample_log(
+        output: u32,
+        latency_ms: u64,
+        first_token_ms: Option<u64>,
+        is_streaming: bool,
+    ) -> RequestLog {
+        RequestLog {
+            request_id: "test".into(),
+            provider_id: "p".into(),
+            app_type: "claude".into(),
+            model: "m".into(),
+            request_model: "m".into(),
+            pricing_model: "m".into(),
+            usage: TokenUsage {
+                input_tokens: 10,
+                output_tokens: output,
+                cache_read_tokens: 0,
+                cache_creation_tokens: 0,
+                model: None,
+                message_id: None,
+            },
+            cost: None,
+            latency_ms,
+            first_token_ms,
+            status_code: 200,
+            error_message: None,
+            session_id: None,
+            provider_type: None,
+            is_streaming,
+            cost_multiplier: "1.0".into(),
+        }
+    }
+
+    #[test]
+    fn tps_is_per_request_using_full_latency_when_no_first_token() {
+        // 800 tokens / 2s = 400 tok/s
+        let log = sample_log(800, 2000, None, true);
+        let tps = compute_tps(&log);
+        assert!((tps - 400.0).abs() < 0.01, "tps={tps}");
+    }
+
+    #[test]
+    fn tps_subtracts_reliable_first_token() {
+        // 900 tokens, total 3s, first token at 1s → gen=2s → 450 tok/s
+        let log = sample_log(900, 3000, Some(1000), true);
+        let tps = compute_tps(&log);
+        assert!((tps - 450.0).abs() < 0.01, "tps={tps}");
+    }
+
+    #[test]
+    fn tps_falls_back_when_first_token_is_late_usage_event() {
+        // 典型 OpenAI/Codex 旧语义：first_token 落在流末，gen=5ms。
+        // 若按 gen 计算会得到 800*1000/5 = 160000 tok/s（荒谬）。
+        // 启发式应回退到整段 latency：800 / 2s = 400.
+        let log = sample_log(800, 2000, Some(1995), true);
+        let tps = compute_tps(&log);
+        assert!(
+            (tps - 400.0).abs() < 0.01,
+            "expected fallback 400 tok/s, got {tps}"
+        );
+        // 确认未走「返回 0」的旧路径
+        assert!(tps > 0.0);
+    }
+
+    #[test]
+    fn tps_falls_back_when_first_token_ge_latency() {
+        let log = sample_log(100, 1000, Some(1000), true);
+        let tps = compute_tps(&log);
+        // 100 tokens / 1s = 100
+        assert!((tps - 100.0).abs() < 0.01, "tps={tps}");
+    }
+
+    #[test]
+    fn tps_non_streaming_uses_full_latency() {
+        let log = sample_log(500, 2500, Some(10), false);
+        let tps = compute_tps(&log);
+        // first_token 对非流式忽略：500 / 2.5s = 200
+        assert!((tps - 200.0).abs() < 0.01, "tps={tps}");
+    }
+
+    #[test]
+    fn tps_zero_output_is_zero() {
+        let log = sample_log(0, 1000, Some(100), true);
+        assert_eq!(compute_tps(&log), 0.0);
+    }
+
+    #[test]
+    fn generation_ms_accepts_short_but_plausible_window() {
+        // 80ms 生成 + 200ms 总耗时：短响应但合理，应保留 gen 窗口
+        assert_eq!(generation_ms(true, Some(120), 200), 80);
+    }
+
+    #[test]
+    fn concurrent_requests_are_independent_samples() {
+        // 两路并发各自 400 tok/s；聚合侧取平均仍是 400，绝不会变成 800。
+        // （本函数只负责单样本；这里验证单样本不会「吃掉」另一路的时间。）
+        let a = sample_log(400, 1000, None, true);
+        let b = sample_log(800, 2000, None, true);
+        let tps_a = compute_tps(&a);
+        let tps_b = compute_tps(&b);
+        assert!((tps_a - 400.0).abs() < 0.01);
+        assert!((tps_b - 400.0).abs() < 0.01);
+        // 若错误地用 wall-clock 共享窗口会得到 (400+800)/max(1,2)s 等错误值
+        assert!(((tps_a + tps_b) / 2.0 - 400.0).abs() < 0.01);
+    }
 }
 
 /// 核心代理路径的唯一钩子：在 `proxy_request_logs` 写入后由 logger 调用。

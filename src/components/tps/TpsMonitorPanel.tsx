@@ -26,7 +26,7 @@ import {
   useResetConcurrencyPeak,
 } from "@/lib/query/tps";
 import { useTpsEventBridge } from "@/hooks/useTpsEventBridge";
-import type { TpsGroupStats } from "@/lib/api/tps";
+import type { TpsGroupStats, TpsSample, TpsTrendPoint } from "@/lib/api/tps";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,9 +37,42 @@ import { cn } from "@/lib/utils";
  * nav 按钮，不影响其它功能。
  *
  * 区块：并发（实时）→ 时间范围选择 → TPS 汇总 → Provider/Model 分组 → 趋势 → 最近样本
+ *
+ * TPS 语义（与后端 `tps::compute_tps` 对齐）：
+ * - **每条样本 = 单次请求**（一次对话 turn），并发请求各自独立，不会叠加
+ * - TPS = output_tokens / generation_seconds
+ * - generation = 流式且 first_token 可信时用 (duration - first_token)，否则用 duration
  */
 
 type RangePreset = "1h" | "24h" | "7d" | "today" | "all";
+
+/** 与后端 `generation_ms` 对齐：用于表格展示「生成耗时」，使 输出/耗时 可反推 TPS */
+function generationMs(sample: TpsSample): number | null {
+  const duration = sample.durationMs;
+  if (duration == null || duration <= 0) return null;
+  if (!sample.isStreaming || sample.firstTokenMs == null) return duration;
+  if (sample.firstTokenMs >= duration) return duration;
+  const gen = duration - sample.firstTokenMs;
+  // 与后端 is_unreliable_generation_window 一致
+  if (gen < 20 && duration > 100) return duration;
+  if (duration >= 500 && gen * 50 < duration) return duration;
+  return gen;
+}
+
+function formatBucketLabel(bucketSec: number, rangePreset: RangePreset): string {
+  const d = new Date(bucketSec * 1000);
+  if (rangePreset === "1h" || rangePreset === "24h" || rangePreset === "today") {
+    return d.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+  return d.toLocaleDateString(undefined, {
+    month: "numeric",
+    day: "numeric",
+    hour: rangePreset === "7d" ? "2-digit" : undefined,
+  });
+}
 
 const RANGE_PRESETS: {
   value: RangePreset;
@@ -169,7 +202,8 @@ export default function TpsMonitorPanel() {
           <Gauge className="w-5 h-5 text-blue-500" />
           <span className="text-sm text-muted-foreground">
             {t("tpsMonitor.subtitle", {
-              defaultValue: "实时统计本地代理每秒输出 token 数",
+              defaultValue:
+                "按单次请求统计输出速度（tok/s）；并发请求各自独立采样，不会叠加",
             })}
           </span>
         </div>
@@ -347,22 +381,21 @@ export default function TpsMonitorPanel() {
           <CardTitle className="text-sm">
             {t("tpsMonitor.trend", { defaultValue: "TPS 趋势" })}
           </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t("tpsMonitor.trendHint", {
+              defaultValue:
+                "每个柱 = 该时间桶内所有请求的平均 TPS（单请求 tok/s 的均值，非并发吞吐叠加）。柱高相对峰值归一化。",
+            })}
+          </p>
         </CardHeader>
         <CardContent>
           {trend && trend.length > 0 ? (
-            <div className="flex items-end gap-0.5 h-32">
-              {trend.map((p) => {
-                const h = Math.max(2, (p.avgTps / maxTrendTps) * 100);
-                return (
-                  <div
-                    key={p.bucket}
-                    className="flex-1 min-w-[2px] bg-blue-500/70 dark:bg-blue-400/70 rounded-t-sm transition-all"
-                    style={{ height: `${h}%` }}
-                    title={`${p.avgTps.toFixed(1)} tok/s · ${p.sampleCount} 样本`}
-                  />
-                );
-              })}
-            </div>
+            <TrendChart
+              points={trend}
+              maxTps={maxTrendTps}
+              rangePreset={rangePreset}
+              t={t}
+            />
           ) : (
             <div className="text-sm text-muted-foreground py-8 text-center">
               {t("tpsMonitor.emptyTrend", { defaultValue: "暂无趋势数据" })}
@@ -377,6 +410,12 @@ export default function TpsMonitorPanel() {
           <CardTitle className="text-sm">
             {t("tpsMonitor.recent", { defaultValue: "最近样本" })}
           </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t("tpsMonitor.recentHint", {
+              defaultValue:
+                "TPS = 输出 Tokens ÷ 生成耗时(秒)。生成耗时优先用 (总耗时 − 首 token)；首 token 不可信时回退总耗时。每行 = 单次请求。",
+            })}
+          </p>
         </CardHeader>
         <CardContent>
           {recent && recent.length > 0 ? (
@@ -398,7 +437,12 @@ export default function TpsMonitorPanel() {
                     </TableHead>
                     <TableHead className="text-right">
                       {t("tpsMonitor.colDuration", {
-                        defaultValue: "耗时(ms)",
+                        defaultValue: "总耗时",
+                      })}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {t("tpsMonitor.colGenDuration", {
+                        defaultValue: "生成耗时",
                       })}
                     </TableHead>
                     <TableHead className="text-right">
@@ -410,47 +454,69 @@ export default function TpsMonitorPanel() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recent.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-mono text-xs whitespace-nowrap">
-                        {new Date(s.createdAt * 1000).toLocaleTimeString()}
-                      </TableCell>
-                      <TableCell className="text-xs">{s.appType}</TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {s.model}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {s.outputTokens.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {s.durationMs ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        <span
-                          className={cn(
-                            s.tps >= 50
-                              ? "text-emerald-500"
-                              : s.tps >= 10
-                                ? "text-blue-500"
-                                : "text-muted-foreground",
-                          )}
+                  {recent.map((s) => {
+                    const gen = generationMs(s);
+                    // 用 输出/生成耗时 现场重算，保证表格可反推；同时修正历史
+                    // 错误 first_token 落库导致的离群 tps（汇总卡片仍读库内值，
+                    // 建议清空后重新采样）。
+                    const displayTps =
+                      gen != null && gen > 0 && s.outputTokens > 0
+                        ? (s.outputTokens * 1000) / gen
+                        : s.tps;
+                    return (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-mono text-xs whitespace-nowrap">
+                          {new Date(s.createdAt * 1000).toLocaleTimeString()}
+                        </TableCell>
+                        <TableCell className="text-xs">{s.appType}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {s.model}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs">
+                          {s.outputTokens.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          {s.durationMs != null
+                            ? `${s.durationMs.toLocaleString()} ms`
+                            : "—"}
+                        </TableCell>
+                        <TableCell
+                          className="text-right font-mono text-xs"
+                          title={
+                            s.firstTokenMs != null
+                              ? `first_token=${s.firstTokenMs}ms`
+                              : undefined
+                          }
                         >
-                          {s.tps.toFixed(1)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {s.isStreaming ? (
-                          <Badge variant="secondary" className="text-[10px]">
-                            stream
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px]">
-                            sync
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          {gen != null ? `${gen.toLocaleString()} ms` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs">
+                          <span
+                            className={cn(
+                              displayTps >= 50
+                                ? "text-emerald-500"
+                                : displayTps >= 10
+                                  ? "text-blue-500"
+                                  : "text-muted-foreground",
+                            )}
+                          >
+                            {displayTps.toFixed(1)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {s.isStreaming ? (
+                            <Badge variant="secondary" className="text-[10px]">
+                              stream
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">
+                              sync
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -476,6 +542,73 @@ export default function TpsMonitorPanel() {
 }
 
 // ── 子组件 ──────────────────────────────────────────────────────────────────
+
+interface TrendChartProps {
+  points: TpsTrendPoint[];
+  maxTps: number;
+  rangePreset: RangePreset;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}
+
+function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
+  const first = points[0];
+  const last = points[points.length - 1];
+  const mid = points[Math.floor(points.length / 2)];
+  const yTicks = [maxTps, maxTps / 2, 0];
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-2">
+        {/* Y 轴刻度 */}
+        <div className="flex flex-col justify-between w-12 shrink-0 h-32 text-[10px] text-muted-foreground font-mono text-right pr-1">
+          {yTicks.map((v, i) => (
+            <span key={i}>{v.toFixed(0)}</span>
+          ))}
+        </div>
+        {/* 柱状区域 */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex items-end gap-0.5 h-32 border-l border-b border-border/60 pl-0.5">
+            {points.map((p) => {
+              const h = Math.max(2, (p.avgTps / maxTps) * 100);
+              const label = formatBucketLabel(p.bucket, rangePreset);
+              return (
+                <div
+                  key={p.bucket}
+                  className="flex-1 min-w-[2px] bg-blue-500/70 dark:bg-blue-400/70 rounded-t-sm transition-all hover:bg-blue-500"
+                  style={{ height: `${h}%` }}
+                  title={`${label}\n${t("tpsMonitor.trendBarTooltip", {
+                    defaultValue: "平均 {{tps}} tok/s · {{count}} 个请求 · 输出 {{tokens}} tokens",
+                    tps: p.avgTps.toFixed(1),
+                    count: p.sampleCount,
+                    tokens: p.totalOutputTokens.toLocaleString(),
+                  })}`}
+                />
+              );
+            })}
+          </div>
+          {/* X 轴时间标签 */}
+          <div className="flex justify-between text-[10px] text-muted-foreground font-mono mt-1 pl-0.5">
+            <span>{formatBucketLabel(first.bucket, rangePreset)}</span>
+            {points.length > 2 && mid && (
+              <span className="opacity-70">
+                {formatBucketLabel(mid.bucket, rangePreset)}
+              </span>
+            )}
+            <span>{formatBucketLabel(last.bucket, rangePreset)}</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground pl-14">
+        <span>
+          {t("tpsMonitor.trendYAxis", { defaultValue: "纵轴：平均 TPS (tok/s)" })}
+        </span>
+        <span>
+          {t("tpsMonitor.trendXAxis", { defaultValue: "横轴：时间" })}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 interface StatCardProps {
   icon?: React.ReactNode;

@@ -5,7 +5,7 @@
 /*
  * Design system: "Glacier" — refined layered glass.
  * See DESIGN_BLUEPRINT.md. Tokens are HSL triplets consumed by tailwind.config.cjs.
- * z-scale: drag-bar 70 > header 50 > overlays 40.
+ * z-scale: drag-bar 70 > popover/select/tooltip 100 > header 50 & dialog/dropdown 50 > search overlay 40.
  */
 @layer base {
   :root {
@@ -163,14 +163,16 @@ body::before {
     inset 0 1px 0 hsl(0 0% 100% / 0.9);
 }
 
-.dark .glass-card-active,
-.dark .glass-card-success {
+.dark .glass-card-active {
   box-shadow: var(--shadow-1);
   border-color: hsl(var(--primary) / 0.45);
+  background: hsl(var(--primary) / 0.1);
 }
 
 .dark .glass-card-success {
+  box-shadow: var(--shadow-1);
   border-color: hsl(var(--success) / 0.45);
+  background: hsl(var(--success) / 0.1);
 }
 
 /* Translucent header material (was a misnamed solid rule). */

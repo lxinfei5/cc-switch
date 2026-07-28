@@ -130,7 +130,7 @@ export function RepoManager({
                   <Button
                     onClick={handleAdd}
                     className="w-full sm:w-auto sm:px-4"
-                    variant="mcp"
+                    variant="default"
                     type="button"
                   >
                     <Plus className="h-4 w-4 mr-2" />

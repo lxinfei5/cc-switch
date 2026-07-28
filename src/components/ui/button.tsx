@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-[0.98] active:duration-100 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -21,8 +21,6 @@ const buttonVariants = cva(
         secondary: "text-muted-foreground hover:bg-muted hover:text-foreground",
         // 幽灵按钮
         ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
-        // MCP 专属按钮（沿用主按钮语义）
-        mcp: "bg-primary text-primary-foreground shadow-1 hover:bg-primary/90",
         // 链接按钮
         link: "text-primary underline-offset-4 hover:underline",
       },

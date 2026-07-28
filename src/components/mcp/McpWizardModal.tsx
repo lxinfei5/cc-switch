@@ -419,7 +419,7 @@ const McpWizardModal: React.FC<McpWizardModalProps> = ({
           <Button variant="outline" onClick={handleClose}>
             {t("common.cancel")}
           </Button>
-          <Button variant="mcp" onClick={handleApply}>
+          <Button variant="default" onClick={handleApply}>
             <Save className="h-4 w-4" />
             {t("mcp.wizard.apply")}
           </Button>

@@ -512,13 +512,9 @@ export default function TpsMonitorPanel() {
                         </TableCell>
                         <TableCell>
                           {s.isStreaming ? (
-                            <Badge variant="secondary" className="text-[10px]">
-                              stream
-                            </Badge>
+                            <Badge variant="secondary">stream</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px]">
-                              sync
-                            </Badge>
+                            <Badge variant="outline">sync</Badge>
                           )}
                         </TableCell>
                       </TableRow>
@@ -567,7 +563,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
     <div className="flex flex-col gap-1">
       <div className="flex gap-2">
         {/* Y 轴刻度 */}
-        <div className="flex flex-col justify-between w-12 shrink-0 h-32 text-[10px] text-muted-foreground tnum text-right pr-1">
+        <div className="flex flex-col justify-between w-12 shrink-0 h-32 text-[11px] text-muted-foreground tnum text-right pr-1">
           {yTicks.map((v, i) => (
             <span key={i}>{v.toFixed(0)}</span>
           ))}
@@ -581,7 +577,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
               return (
                 <div
                   key={p.bucket}
-                  className="flex-1 min-w-[2px] bg-blue-500/70 dark:bg-blue-400/70 rounded-t-sm transition-all hover:bg-blue-500"
+                  className="flex-1 min-w-[2px] bg-primary/70 rounded-t-sm transition-colors duration-150 hover:bg-primary"
                   style={{ height: `${h}%` }}
                   title={`${label}\n${t("tpsMonitor.trendBarTooltip", {
                     defaultValue:
@@ -595,7 +591,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
             })}
           </div>
           {/* X 轴时间标签 */}
-          <div className="flex justify-between text-[10px] text-muted-foreground tnum mt-1 pl-0.5">
+          <div className="flex justify-between text-[11px] text-muted-foreground tnum mt-1 pl-0.5">
             <span>{formatBucketLabel(first.bucket, rangePreset)}</span>
             {points.length > 2 && mid && (
               <span className="opacity-70">
@@ -606,7 +602,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground pl-14">
+      <div className="flex items-center justify-between text-[11px] text-muted-foreground pl-14">
         <span>
           {t("tpsMonitor.trendYAxis", {
             defaultValue: "纵轴：平均 TPS (tok/s)",

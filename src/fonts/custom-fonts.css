@@ -1,64 +1,29 @@
 /*
  * ──────────────────────────────────────────────────────────────────────────
- *  可插拔全局字体覆盖：Monaco + 微软雅黑
- *  Pluggable global font override — Monaco (code/mono) + 微软雅黑 (UI/CJK)
+ *  可插拔全局字体覆盖（已停用 / DISABLED）
  * ──────────────────────────────────────────────────────────────────────────
  *
- *  这是从上游 fork 出来的本地定制。设计目标：**不改动上游的 index.css 与
- *  tailwind.config.cjs**，全部字体替换集中在本文件，仅在 main.tsx 中追加一行
- *  `import "./fonts/custom-fonts.css";`（位于 `./index.css` 之后）。这样在
- *  同步上游 (git merge upstream/main) 时，字体相关的改动几乎零冲突。
+ *  现状：本文件已不再被 main.tsx 引入，字体栈统一收敛到 tailwind.config.cjs 的
+ *  `fontFamily.sans`（Latin 优先 -apple-system/Inter/Segoe UI，中文回落
+ *  PingFang SC / 微软雅黑 / Noto Sans CJK；等宽 fontFamily.mono 优先 Monaco）。
+ *  这是「字体单一来源」的刻意设计，避免 config 与 override 双头漂移。
  *
- *  想恢复上游字体：注释掉 main.tsx 里的这一行 import 即可，本文件可保留或删除。
+ *  如何恢复「微软雅黑全局最优先（西文也用雅黑字形）」的旧行为：
+ *  1) 把下面这段规则取消注释；
+ *  2) 在 src/main.tsx 的 `import "./index.css";` 之后重新加一行
+ *       import "./fonts/custom-fonts.css";
+ *  即可（本文件在 index.css 之后加载，等特异性下后加载者胜出）。
  *
- *  说明：
- *  - UI 字体「Latin 优先」：西文/数字用 Inter/系统无衬线渲染（字形更优雅），
- *    中文回落微软雅黑/苹方等，保证中英混排协调且跨平台都有合理外观。
- *  - 代码/等宽字体优先 Monaco（macOS 自带），fallback Cascadia / JetBrains /
- *    Menlo / Consolas / ui-monospace，覆盖 Windows/Linux。
- *  - 本文件**不使用** `@layer`：Tailwind v3 的 PostCSS 插件要求 `@layer` 出现在
- *    含有 `@tailwind` 指令的同一文件中（只有 index.css 有），独立文件里写
- *    `@layer base/utilities` 会导致构建报错。改用普通 CSS 规则：本文件在
- *    index.css 之后加载，等特异性下后加载者胜出，足以覆盖上游 `html{@apply font-sans}`
- *    与 Tailwind 生成的 `.font-sans` / `.font-mono` 工具类，所有 shadcn 组件、
- *    内联代码、代码块统一生效。
+ *  html, .font-sans {
+ *    font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC",
+ *      "Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC",
+ *      "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont,
+ *      "Helvetica Neue", Arial, sans-serif;
+ *  }
+ *  .font-mono, code, pre, kbd, samp, tt {
+ *    font-family: Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono",
+ *      Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono",
+ *      ui-monospace, "SFMono-Regular", monospace;
+ *  }
  * ──────────────────────────────────────────────────────────────────────────
  */
-
-/* UI / 正文：Latin 优先（西文用 Inter/系统无衬线渲染，字形更优雅），中文回落雅黑/苹方 */
-html {
-  font-family:
-    -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", "微软雅黑", "Noto Sans CJK SC", "Source Han Sans SC",
-    sans-serif;
-}
-
-/* UI 工具类：覆盖 Tailwind 生成的 .font-sans（后加载胜出） */
-.font-sans {
-  font-family:
-    -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", "微软雅黑", "Noto Sans CJK SC", "Source Han Sans SC",
-    sans-serif;
-}
-
-/* 代码 / 等宽：Monaco 优先，跨平台 fallback，覆盖 Tailwind .font-mono 工具类 */
-.font-mono {
-  font-family:
-    Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas,
-    "Liberation Mono", "DejaVu Sans Mono", ui-monospace, "SFMono-Regular",
-    monospace;
-}
-
-/* 兜底：直接命中代码相关元素，覆盖未走 font-mono 工具类的内联代码 */
-code,
-pre,
-kbd,
-samp,
-tt {
-  font-family:
-    Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas,
-    "Liberation Mono", "DejaVu Sans Mono", ui-monospace, "SFMono-Regular",
-    monospace;
-}

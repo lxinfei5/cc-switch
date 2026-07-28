@@ -147,7 +147,7 @@ export function SkillCard({
           </Button>
         ) : (
           <Button
-            variant="mcp"
+            variant="default"
             size="sm"
             onClick={handleInstall}
             disabled={loading || !skill.repoOwner}

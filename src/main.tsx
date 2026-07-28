@@ -4,10 +4,8 @@ import App from "./App";
 import { DatabaseUpgrade } from "./components/DatabaseUpgrade";
 import { UpdateProvider } from "./contexts/UpdateContext";
 import "./index.css";
-// 本地定制：全局字体覆盖（Monaco + 微软雅黑）。
-// 位于 ./index.css 之后以赢得层叠优先级；同步上游时仅需保留这一行。
-// 如需恢复上游字体，注释掉下面这行 import 即可。
-import "./fonts/custom-fonts.css";
+// 字体栈现统一由 tailwind.config.cjs 的 fontFamily.sans 提供（Latin 优先、中文回落雅黑/苹方、
+// 等宽优先 Monaco）。原「可插拔字体覆盖」已停用，恢复路径见 src/fonts/custom-fonts.css 注释。
 // 导入国际化配置
 import i18n from "./i18n";
 import { QueryClientProvider } from "@tanstack/react-query";

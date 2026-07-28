@@ -266,7 +266,7 @@ function App() {
   const { data: unmanagedSkills } = useScanUnmanagedSkills();
   const hasUnmanagedSkills = (unmanagedSkills?.length ?? 0) > 0;
   const addActionButtonClass =
-    "rounded-full h-8 w-8 bg-primary text-primary-foreground shadow-1 hover:bg-primary/90 active:scale-[0.98] transition-all duration-150";
+    "rounded-full h-8 w-8 bg-primary text-primary-foreground shadow-1 hover:bg-primary/90 active:scale-[0.98] transition-[color,background-color,box-shadow,transform] duration-150";
 
   const {
     isRunning: isProxyRunning,
@@ -1061,7 +1061,7 @@ function App() {
 
   return (
     <div
-      className="flex flex-col h-screen overflow-hidden bg-transparent text-foreground selection:bg-primary/30"
+      className="flex flex-col h-screen overflow-hidden bg-transparent text-foreground"
       style={{ overflowX: "hidden", paddingTop: contentTopOffset }}
     >
       {(dragBarHeight > 0 || useAppWindowControls) && (
@@ -1209,15 +1209,15 @@ function App() {
                     rel="noreferrer"
                     className={cn(
                       "group inline-flex items-center gap-2 rounded-xl px-2.5 py-1",
-                      "glass-card transition-shadow duration-200",
-                      isProxyRunning && isCurrentAppTakeoverActive
-                        ? "glass-card-success"
-                        : "glass-card-active",
+                      "glass-card transition-shadow duration-150 hover:shadow-2",
+                      isProxyRunning &&
+                        isCurrentAppTakeoverActive &&
+                        "glass-card-success",
                     )}
                   >
                     <span
                       className={cn(
-                        "inline-flex h-6 w-6 items-center justify-center rounded-md text-white shadow-1 transition-colors",
+                        "inline-flex h-6 w-6 items-center justify-center rounded-md text-primary-foreground shadow-1 transition-colors",
                         isProxyRunning && isCurrentAppTakeoverActive
                           ? "bg-success"
                           : "bg-primary",

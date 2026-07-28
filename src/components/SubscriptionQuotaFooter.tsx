@@ -46,7 +46,7 @@ export const TIER_I18N_KEYS: Record<string, string> = {
 
 /** 根据使用百分比返回颜色 class */
 export function utilizationColor(utilization: number): string {
-  if (utilization >= 90) return "text-red-500 dark:text-red-400";
+  if (utilization >= 90) return "text-destructive";
   if (utilization >= 70) return "text-orange-500 dark:text-orange-400";
   return "text-green-600 dark:text-green-400";
 }
@@ -177,7 +177,7 @@ export const SubscriptionQuotaView: React.FC<SubscriptionQuotaViewProps> = ({
     if (inline) {
       return (
         <div className="inline-flex items-center gap-2 text-xs rounded-lg border border-border-default bg-card px-3 py-2 shadow-sm">
-          <div className="flex items-center gap-1.5 text-red-500 dark:text-red-400">
+          <div className="flex items-center gap-1.5 text-destructive">
             <AlertCircle size={12} />
             <span>{t("subscription.queryFailed")}</span>
           </div>
@@ -195,7 +195,7 @@ export const SubscriptionQuotaView: React.FC<SubscriptionQuotaViewProps> = ({
     return (
       <Panel className="mt-3">
         <div className="flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-red-500 dark:text-red-400">
+          <div className="flex items-center gap-2 text-destructive">
             <AlertCircle size={14} />
             <span>{quota.error || t("subscription.queryFailed")}</span>
           </div>
@@ -364,7 +364,7 @@ const TierBar: React.FC<{
       {/* 进度条 */}
       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all ${
+          className={`h-full rounded-full transition-[width] ${
             tier.utilization >= 90
               ? "bg-red-500"
               : tier.utilization >= 70

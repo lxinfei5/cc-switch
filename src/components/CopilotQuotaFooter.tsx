@@ -64,7 +64,7 @@ const CopilotQuotaFooter: React.FC<CopilotQuotaFooterProps> = ({
     if (inline) {
       return (
         <div className="inline-flex items-center gap-2 text-xs rounded-lg border border-border-default bg-card px-3 py-2 shadow-sm">
-          <div className="flex items-center gap-1.5 text-red-500 dark:text-red-400">
+          <div className="flex items-center gap-1.5 text-destructive">
             <AlertCircle size={12} />
             <span>{quota.error || t("subscription.queryFailed")}</span>
           </div>
@@ -162,7 +162,7 @@ const CopilotQuotaFooter: React.FC<CopilotQuotaFooterProps> = ({
               </span>
               <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${
+                  className={`h-full rounded-full transition-[width] ${
                     tier.utilization >= 90
                       ? "bg-red-500"
                       : tier.utilization >= 70

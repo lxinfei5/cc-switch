@@ -28,54 +28,26 @@
 /* UI / 正文：Latin 优先（西文用 Inter/系统无衬线渲染，字形更优雅），中文回落雅黑/苹方 */
 html {
   font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    Inter,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Microsoft YaHei",
-    "微软雅黑",
-    "Noto Sans CJK SC",
-    "Source Han Sans SC",
+    -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "微软雅黑", "Noto Sans CJK SC", "Source Han Sans SC",
     sans-serif;
 }
 
 /* UI 工具类：覆盖 Tailwind 生成的 .font-sans（后加载胜出） */
 .font-sans {
   font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    Inter,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Microsoft YaHei",
-    "微软雅黑",
-    "Noto Sans CJK SC",
-    "Source Han Sans SC",
+    -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "微软雅黑", "Noto Sans CJK SC", "Source Han Sans SC",
     sans-serif;
 }
 
 /* 代码 / 等宽：Monaco 优先，跨平台 fallback，覆盖 Tailwind .font-mono 工具类 */
 .font-mono {
   font-family:
-    Monaco,
-    "Cascadia Code",
-    "JetBrains Mono",
-    "SF Mono",
-    Menlo,
-    Consolas,
-    "Liberation Mono",
-    "DejaVu Sans Mono",
-    ui-monospace,
-    "SFMono-Regular",
+    Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", "DejaVu Sans Mono", ui-monospace, "SFMono-Regular",
     monospace;
 }
 
@@ -86,15 +58,7 @@ kbd,
 samp,
 tt {
   font-family:
-    Monaco,
-    "Cascadia Code",
-    "JetBrains Mono",
-    "SF Mono",
-    Menlo,
-    Consolas,
-    "Liberation Mono",
-    "DejaVu Sans Mono",
-    ui-monospace,
-    "SFMono-Regular",
+    Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", "DejaVu Sans Mono", ui-monospace, "SFMono-Regular",
     monospace;
 }

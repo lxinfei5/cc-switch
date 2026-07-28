@@ -59,9 +59,16 @@ function generationMs(sample: TpsSample): number | null {
   return gen;
 }
 
-function formatBucketLabel(bucketSec: number, rangePreset: RangePreset): string {
+function formatBucketLabel(
+  bucketSec: number,
+  rangePreset: RangePreset,
+): string {
   const d = new Date(bucketSec * 1000);
-  if (rangePreset === "1h" || rangePreset === "24h" || rangePreset === "today") {
+  if (
+    rangePreset === "1h" ||
+    rangePreset === "24h" ||
+    rangePreset === "today"
+  ) {
     return d.toLocaleTimeString(undefined, {
       hour: "2-digit",
       minute: "2-digit",
@@ -577,7 +584,8 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
                   className="flex-1 min-w-[2px] bg-blue-500/70 dark:bg-blue-400/70 rounded-t-sm transition-all hover:bg-blue-500"
                   style={{ height: `${h}%` }}
                   title={`${label}\n${t("tpsMonitor.trendBarTooltip", {
-                    defaultValue: "平均 {{tps}} tok/s · {{count}} 个请求 · 输出 {{tokens}} tokens",
+                    defaultValue:
+                      "平均 {{tps}} tok/s · {{count}} 个请求 · 输出 {{tokens}} tokens",
                     tps: p.avgTps.toFixed(1),
                     count: p.sampleCount,
                     tokens: p.totalOutputTokens.toLocaleString(),
@@ -600,7 +608,9 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
       </div>
       <div className="flex items-center justify-between text-[10px] text-muted-foreground pl-14">
         <span>
-          {t("tpsMonitor.trendYAxis", { defaultValue: "纵轴：平均 TPS (tok/s)" })}
+          {t("tpsMonitor.trendYAxis", {
+            defaultValue: "纵轴：平均 TPS (tok/s)",
+          })}
         </span>
         <span>
           {t("tpsMonitor.trendXAxis", { defaultValue: "横轴：时间" })}

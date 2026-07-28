@@ -224,9 +224,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
           {/* 已用 */}
           {firstUsage.used !== undefined && (
             <div className="flex items-center gap-0.5">
-              <span className="text-muted-foreground">
-                {t("usage.used")}
-              </span>
+              <span className="text-muted-foreground">{t("usage.used")}</span>
               <span className="tabular-nums text-muted-foreground font-medium">
                 {firstUsage.used.toFixed(2)}
               </span>
@@ -256,9 +254,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
 
           {/* 单位 */}
           {firstUsage.unit && (
-            <span className="text-muted-foreground">
-              {firstUsage.unit}
-            </span>
+            <span className="text-muted-foreground">{firstUsage.unit}</span>
           )}
 
           {/* 扩展字段 extra */}
@@ -377,9 +373,7 @@ const UsagePlanItem: React.FC<{ data: UsageData }> = ({ data }) => {
         {/* 总额度 */}
         {total !== undefined && (
           <>
-            <span className="text-muted-foreground">
-              {t("usage.total")}
-            </span>
+            <span className="text-muted-foreground">{t("usage.total")}</span>
             <span className="tabular-nums text-muted-foreground">
               {total === -1 ? "∞" : total.toFixed(2)}
             </span>
@@ -390,9 +384,7 @@ const UsagePlanItem: React.FC<{ data: UsageData }> = ({ data }) => {
         {/* 已用额度 */}
         {used !== undefined && (
           <>
-            <span className="text-muted-foreground">
-              {t("usage.used")}
-            </span>
+            <span className="text-muted-foreground">{t("usage.used")}</span>
             <span className="tabular-nums text-muted-foreground">
               {used.toFixed(2)}
             </span>
@@ -420,9 +412,7 @@ const UsagePlanItem: React.FC<{ data: UsageData }> = ({ data }) => {
           </>
         )}
 
-        {unit && (
-          <span className="text-muted-foreground">{unit}</span>
-        )}
+        {unit && <span className="text-muted-foreground">{unit}</span>}
       </div>
     </div>
   );

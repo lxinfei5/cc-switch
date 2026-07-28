@@ -129,8 +129,10 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
         : { minHeight: `${minHeightPx}px` },
       ".cm-scroller": { overflow: "auto" },
       ".cm-content": {
+        // Keep in sync with fontFamily.mono in tailwind.config.cjs (single
+        // source of truth): English → Monaco, Chinese → Microsoft YaHei.
         fontFamily:
-          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+          "Monaco, 'Microsoft YaHei', '微软雅黑', Menlo, Consolas, monospace",
         fontSize: "14px",
       },
     });

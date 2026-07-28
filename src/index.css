@@ -2,115 +2,158 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design system: "Glacier" — refined layered glass.
+ * See DESIGN_BLUEPRINT.md. Tokens are HSL triplets consumed by tailwind.config.cjs.
+ * z-scale: drag-bar 70 > header 50 > overlays 40.
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 220 20% 97%;
+    --foreground: 222 22% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222 22% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 222 22% 12%;
 
-    --primary: 210 100% 56%;
+    --primary: 213 92% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 220 14% 95%;
+    --secondary-foreground: 222 22% 12%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --muted: 220 14% 95%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 220 14% 94%;
+    --accent-foreground: 222 22% 12%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 210 100% 56%;
+    --success: 158 64% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 92% 44%;
+    --warning-foreground: 0 0% 100%;
 
-    --radius: 0.5rem;
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 213 92% 50%;
+
+    --radius: 0.625rem;
+
+    /* Theme-aware elevation */
+    --shadow-1: 0 1px 2px hsl(222 30% 10% / 0.05), 0 1px 1px hsl(222 30% 10% / 0.04);
+    --shadow-2: 0 4px 16px -4px hsl(222 30% 10% / 0.08), 0 2px 6px -2px hsl(222 30% 10% / 0.05);
+    --shadow-3: 0 16px 48px -12px hsl(222 30% 10% / 0.16), 0 4px 12px -4px hsl(222 30% 10% / 0.08);
+
+    --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .dark {
-    --background: 240 5% 12%;
-    --foreground: 0 0% 98%;
-    --card: 240 5% 16%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 5% 16%;
-    --popover-foreground: 0 0% 98%;
+    --background: 222 16% 9%;
+    --foreground: 220 15% 94%;
+    --card: 222 13% 12.5%;
+    --card-foreground: 220 15% 94%;
+    --popover: 222 13% 14%;
+    --popover-foreground: 220 15% 94%;
 
-    --primary: 210 100% 54%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 213 100% 64%;
+    --primary-foreground: 222 30% 10%;
 
-    --secondary: 240 5% 18%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 222 11% 16%;
+    --secondary-foreground: 220 15% 94%;
 
-    --muted: 240 5% 18%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 5% 18%;
-    --accent-foreground: 0 0% 98%;
+    --muted: 222 11% 16%;
+    --muted-foreground: 220 10% 62%;
+    --accent: 222 12% 18%;
+    --accent-foreground: 220 15% 94%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 63% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5% 24%;
-    --input: 240 5% 24%;
-    --ring: 210 100% 54%;
+    --success: 160 60% 52%;
+    --success-foreground: 160 80% 10%;
+    --warning: 38 95% 58%;
+    --warning-foreground: 38 90% 10%;
+
+    --border: 220 10% 22%;
+    --input: 220 10% 24%;
+    --ring: 213 100% 64%;
+
+    --shadow-1: 0 1px 2px hsl(0 0% 0% / 0.4);
+    --shadow-2: 0 8px 24px -8px hsl(0 0% 0% / 0.55);
+    --shadow-3: 0 24px 64px -16px hsl(0 0% 0% / 0.65);
   }
 }
 
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+/* Tinted backdrop wash: gives the glass material something to blur. Token-derived. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -20%, hsl(var(--primary) / 0.05), transparent 60%),
+    hsl(var(--background));
 }
 
-.dark .glass {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.dark body::before {
+  background:
+    radial-gradient(120% 80% at 50% -20%, hsl(var(--primary) / 0.07), transparent 60%),
+    hsl(var(--background));
+}
+
+/* Glass material — rewritten in place so all existing call sites upgrade for free. */
+.glass {
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid hsl(var(--border) / 0.6);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: hsl(var(--card) / 0.72);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid hsl(var(--border) / 0.8);
+  box-shadow: var(--shadow-1), inset 0 1px 0 hsl(0 0% 100% / 0.9);
 }
 
 .dark .glass-card {
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.01) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  background: linear-gradient(160deg, hsl(0 0% 100% / 0.055), hsl(0 0% 100% / 0.02));
+  border: 1px solid hsl(0 0% 100% / 0.07);
+  box-shadow: var(--shadow-1), inset 0 1px 0 hsl(0 0% 100% / 0.06);
 }
 
 .glass-card-active {
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-color: hsl(var(--primary) / 0.4);
+  background: hsl(var(--primary) / 0.06);
+  box-shadow: 0 4px 16px -6px hsl(var(--primary) / 0.25), inset 0 1px 0 hsl(0 0% 100% / 0.9);
 }
 
-.dark .glass-card-active {
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+.glass-card-success {
+  border-color: hsl(var(--success) / 0.4);
+  background: hsl(var(--success) / 0.06);
+  box-shadow: 0 4px 16px -6px hsl(var(--success) / 0.25), inset 0 1px 0 hsl(0 0% 100% / 0.9);
 }
 
+.dark .glass-card-active,
+.dark .glass-card-success {
+  box-shadow: var(--shadow-1);
+  border-color: hsl(var(--primary) / 0.45);
+}
+
+.dark .glass-card-success {
+  border-color: hsl(var(--success) / 0.45);
+}
+
+/* Translucent header material (was a misnamed solid rule). */
 .glass-header {
-  background: hsl(var(--background));
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border: none;
-  border-top: 2px solid hsl(var(--border));
-}
-
-.dark .glass-header {
-  background: hsl(var(--background));
-  border: none;
-  border-top: 2px solid hsl(var(--border));
+  background: hsl(var(--background) / 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
 }
 
 [data-tauri-drag-region] {
@@ -124,8 +167,8 @@
 
 * {
   box-sizing: border-box;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
 }
 
 html {
@@ -136,7 +179,9 @@ html {
 }
 
 body {
-  @apply m-0 p-0 text-sm;
+  @apply m-0 p-0;
+  font-size: 13px;
+  line-height: 1.5;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
@@ -145,15 +190,43 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Slim, themed scrollbars (affordance is a feature — do not hide them). */
 ::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+  height: 8px;
 }
 
-*:focus-visible {
-  @apply outline-2 outline-blue-500 outline-offset-2;
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.25);
+}
+
+@layer components {
+  /* Shared ghost toolbar button — replaces copy-pasted hover:bg-black/5 strings. */
+  .toolbar-btn {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-2
+      text-muted-foreground transition-colors duration-150
+      hover:bg-foreground/[0.06] hover:text-foreground;
+  }
 }
 
 @layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
   .scroll-overlay {
     scrollbar-gutter: stable both-edges;
     padding-right: 0.5rem;
@@ -222,5 +295,15 @@ input[type="password"]::-ms-clear {
   .usage-range-calendar {
     min-width: 0;
     flex: 1 1 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -12,8 +12,8 @@
  *  想恢复上游字体：注释掉 main.tsx 里的这一行 import 即可，本文件可保留或删除。
  *
  *  说明：
- *  - UI 字体优先「微软雅黑 / Microsoft YaHei」，中文 fallback 为苹方等系统字体，
- *    西文 fallback 为系统无衬线栈，保证跨平台都有合理外观。
+ *  - UI 字体「Latin 优先」：西文/数字用 Inter/系统无衬线渲染（字形更优雅），
+ *    中文回落微软雅黑/苹方等，保证中英混排协调且跨平台都有合理外观。
  *  - 代码/等宽字体优先 Monaco（macOS 自带），fallback Cascadia / JetBrains /
  *    Menlo / Consolas / ui-monospace，覆盖 Windows/Linux。
  *  - 本文件**不使用** `@layer`：Tailwind v3 的 PostCSS 插件要求 `@layer` 出现在
@@ -25,39 +25,41 @@
  * ──────────────────────────────────────────────────────────────────────────
  */
 
-/* UI / 正文：微软雅黑优先，中文与西文各带合理 fallback */
+/* UI / 正文：Latin 优先（西文用 Inter/系统无衬线渲染，字形更优雅），中文回落雅黑/苹方 */
 html {
   font-family:
-    "Microsoft YaHei",
-    "微软雅黑",
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Noto Sans CJK SC",
-    "Source Han Sans SC",
-    "Segoe UI",
-    Roboto,
     -apple-system,
     BlinkMacSystemFont,
+    Inter,
+    "Segoe UI",
+    Roboto,
     "Helvetica Neue",
     Arial,
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    "微软雅黑",
+    "Noto Sans CJK SC",
+    "Source Han Sans SC",
     sans-serif;
 }
 
 /* UI 工具类：覆盖 Tailwind 生成的 .font-sans（后加载胜出） */
 .font-sans {
   font-family:
-    "Microsoft YaHei",
-    "微软雅黑",
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Noto Sans CJK SC",
-    "Source Han Sans SC",
-    "Segoe UI",
-    Roboto,
     -apple-system,
     BlinkMacSystemFont,
+    Inter,
+    "Segoe UI",
+    Roboto,
     "Helvetica Neue",
     Arial,
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    "微软雅黑",
+    "Noto Sans CJK SC",
+    "Source Han Sans SC",
     sans-serif;
 }
 

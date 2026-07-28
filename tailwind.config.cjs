@@ -35,26 +35,38 @@ module.exports = {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        // Palette ramps re-tuned to the cool, token-harmonized hue family so the
+        // existing call sites render coherently with the design tokens. The
+        // migration target is semantic tokens (primary/success/warning/destructive/
+        // muted); these ramps are kept in sync for the legacy call sites.
         blue: {
-          400: "#409CFF",
-          500: "#0A84FF",
-          600: "#0060DF",
+          400: "#58A6FF",
+          500: "#1473E6",
+          600: "#0B5CC7",
         },
         gray: {
-          50: "#fafafa",
-          100: "#f4f4f5",
-          200: "#e4e4e7",
-          300: "#d4d4d8",
-          400: "#a1a1aa",
-          500: "#71717a",
-          600: "#636366",
-          700: "#48484A",
-          800: "#3A3A3C",
-          900: "#2C2C2E",
-          950: "#1C1C1E",
+          50: "#F7F8FA",
+          100: "#EEF0F3",
+          200: "#E3E6EB",
+          300: "#CFD4DC",
+          400: "#9AA1AC",
+          500: "#6E747E",
+          600: "#565B64",
+          700: "#42464E",
+          800: "#32353B",
+          900: "#26282D",
+          950: "#1A1B1F",
         },
         green: {
           100: "#d1fae5",
@@ -70,25 +82,32 @@ module.exports = {
         },
       },
       boxShadow: {
-        sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-        md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-        lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        1: "var(--shadow-1)",
+        2: "var(--shadow-2)",
+        3: "var(--shadow-3)",
+        sm: "var(--shadow-1)",
+        md: "var(--shadow-2)",
+        lg: "var(--shadow-3)",
       },
       borderRadius: {
-        sm: "0.375rem",
-        md: "0.5rem",
-        lg: "0.75rem",
-        xl: "0.875rem",
+        sm: "calc(var(--radius) - 0.25rem)",
+        md: "calc(var(--radius) - 0.125rem)",
+        lg: "var(--radius)",
+        xl: "calc(var(--radius) + 0.375rem)",
+        "2xl": "calc(var(--radius) + 0.625rem)",
       },
       fontFamily: {
-        // 使用与之前版本保持一致的系统字体栈
+        // Latin-first so Windows renders Latin glyphs in a Latin face; CJK falls
+        // through to PingFang/YaHei. Single source of truth for the app font.
         sans: [
           "-apple-system",
           "BlinkMacSystemFont",
+          "Inter",
           '"Segoe UI"',
-          "Roboto",
-          '"Helvetica Neue"',
-          "Arial",
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          '"Noto Sans CJK SC"',
           "sans-serif",
         ],
         mono: [
@@ -101,11 +120,14 @@ module.exports = {
           "monospace",
         ],
       },
+      transitionTimingFunction: {
+        expo: "var(--ease-out-expo)",
+      },
       animation: {
-        "fade-in": "fadeIn 0.5s ease-out",
-        "slide-up": "slideUp 0.5s ease-out",
-        "slide-down": "slideDown 0.3s ease-out",
-        "slide-in-right": "slideInRight 0.3s ease-out",
+        "fade-in": "fadeIn 0.2s var(--ease-out-expo)",
+        "slide-up": "slideUp 0.2s var(--ease-out-expo)",
+        "slide-down": "slideDown 0.2s var(--ease-out-expo)",
+        "slide-in-right": "slideInRight 0.2s var(--ease-out-expo)",
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
@@ -121,7 +143,7 @@ module.exports = {
         },
         slideUp: {
           "0%": {
-            transform: "translateY(20px)",
+            transform: "translateY(6px)",
             opacity: "0",
           },
           "100%": {
@@ -131,7 +153,7 @@ module.exports = {
         },
         slideDown: {
           "0%": {
-            transform: "translateY(-100%)",
+            transform: "translateY(-6px)",
             opacity: "0",
           },
           "100%": {
@@ -141,7 +163,7 @@ module.exports = {
         },
         slideInRight: {
           "0%": {
-            transform: "translateX(100%)",
+            transform: "translateX(6px)",
             opacity: "0",
           },
           "100%": {
@@ -168,6 +190,5 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
-

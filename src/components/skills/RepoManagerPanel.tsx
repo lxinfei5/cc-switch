@@ -157,7 +157,7 @@ export function RepoManagerPanel({
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {t("skills.repo.branch")}: {repo.branch || "main"}
-                    <span className="ml-3 inline-flex items-center rounded-full border border-border-default px-2 py-0.5 text-[11px]">
+                    <span className="ml-3 inline-flex items-center rounded-full border border-border-default px-2 py-0.5 text-caption">
                       {t("skills.repo.skillCount", {
                         count: getSkillCount(repo),
                       })}

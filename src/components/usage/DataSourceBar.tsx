@@ -71,7 +71,7 @@ export function DataSourceBar({ refreshIntervalMs }: DataSourceBarProps) {
   const hasNonProxy = sources.some((s) => s.dataSource !== "proxy");
 
   return (
-    <div className="flex items-center gap-3 text-xs text-muted-foreground bg-muted/30 rounded-lg px-4 py-2">
+    <div className="flex items-center gap-3 text-sm text-muted-foreground bg-muted/30 rounded-lg px-4 py-2">
       <span className="font-medium text-foreground/70">
         {t("usage.dataSources", { defaultValue: "Data Sources" })}:
       </span>
@@ -89,7 +89,7 @@ export function DataSourceBar({ refreshIntervalMs }: DataSourceBarProps) {
                 defaultValue: source.dataSource,
               })}
             </span>
-            <span className="font-mono font-medium text-foreground/80">
+            <span className="font-medium tnum text-foreground/80">
               {source.requestCount.toLocaleString()}
             </span>
           </div>
@@ -100,7 +100,7 @@ export function DataSourceBar({ refreshIntervalMs }: DataSourceBarProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs"
+          className="h-7 px-2 text-sm"
           onClick={handleSync}
           disabled={syncing}
           title={t("usage.sessionSync.trigger", {

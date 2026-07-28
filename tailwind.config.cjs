@@ -97,28 +97,39 @@ module.exports = {
         "2xl": "calc(var(--radius) + 0.625rem)",
       },
       fontFamily: {
-        // Latin-first so Windows renders Latin glyphs in a Latin face; CJK falls
-        // through to PingFang/YaHei. Single source of truth for the app font.
+        // English → Monaco (no CJK glyphs); Chinese falls through to YaHei.
+        // Single source of truth — do not re-declare stacks elsewhere.
         sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Inter",
-          '"Segoe UI"',
+          "Monaco",
+          '"Microsoft YaHei"',
+          '"微软雅黑"',
           '"PingFang SC"',
           '"Hiragino Sans GB"',
-          '"Microsoft YaHei"',
           '"Noto Sans CJK SC"',
           "sans-serif",
         ],
         mono: [
-          "ui-monospace",
-          "SFMono-Regular",
-          '"SF Mono"',
-          "Consolas",
-          '"Liberation Mono"',
+          "Monaco",
+          '"Microsoft YaHei"',
+          '"微软雅黑"',
           "Menlo",
+          "Consolas",
           "monospace",
         ],
+      },
+      // 5-tier type scale (px, not rem) so every page shares the same sizes.
+      // caption < xs < sm/base < lg < xl/2xl
+      fontSize: {
+        caption: ["11px", { lineHeight: "1.4" }],
+        xs: ["12px", { lineHeight: "1.45" }],
+        sm: ["13px", { lineHeight: "1.5" }],
+        base: ["13px", { lineHeight: "1.5" }],
+        md: ["14px", { lineHeight: "1.5" }],
+        lg: ["16px", { lineHeight: "1.4" }],
+        xl: ["18px", { lineHeight: "1.3" }],
+        "2xl": ["22px", { lineHeight: "1.2" }],
+        // Collapse legacy text-3xl onto the display tier
+        "3xl": ["22px", { lineHeight: "1.2" }],
       },
       transitionTimingFunction: {
         expo: "var(--ease-out-expo)",

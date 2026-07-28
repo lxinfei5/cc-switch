@@ -147,7 +147,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
       <div className="flex flex-col items-end gap-1 text-xs whitespace-nowrap flex-shrink-0">
         {/* 第一行：查询时间 + 刷新 */}
         <div className="flex items-center gap-2 justify-end">
-          <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1">
+          <span className="text-caption text-muted-foreground/70 flex items-center gap-1">
             <Clock size={10} />
             {lastQueriedAt
               ? formatRelativeTime(lastQueriedAt, now, t)
@@ -198,7 +198,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
         {/* 第一行：更新时间和刷新按钮 */}
         <div className="flex items-center gap-2 justify-end">
           {/* 上次查询时间 */}
-          <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1">
+          <span className="text-caption text-muted-foreground/70 flex items-center gap-1">
             <Clock size={10} />
             {lastQueriedAt
               ? formatRelativeTime(lastQueriedAt, now, t)
@@ -281,7 +281,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
         <div className="flex items-center gap-2">
           {/* 自动查询时间提示 */}
           {lastQueriedAt && (
-            <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1">
+            <span className="text-caption text-muted-foreground/70 flex items-center gap-1">
               <Clock size={10} />
               {formatRelativeTime(lastQueriedAt, now, t)}
             </span>
@@ -359,7 +359,7 @@ const UsagePlanItem: React.FC<{ data: UsageData }> = ({ data }) => {
           </span>
         )}
         {isExpired && (
-          <span className="text-destructive font-medium text-[10px] px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 rounded flex-shrink-0">
+          <span className="text-destructive font-medium text-caption px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 rounded flex-shrink-0">
             {invalidMessage || t("usage.invalid")}
           </span>
         )}

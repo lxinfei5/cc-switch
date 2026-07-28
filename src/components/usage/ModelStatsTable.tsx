@@ -72,19 +72,19 @@ export function ModelStatsTable({
           ) : (
             stats?.map((stat) => (
               <TableRow key={stat.model}>
-                <TableCell className="font-mono text-sm">
+                <TableCell className="font-medium" title={stat.model}>
                   {stat.model}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {stat.requestCount.toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {stat.totalTokens.toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {fmtUsd(stat.totalCost, 4)}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {fmtUsd(stat.avgCostPerRequest, 6)}
                 </TableCell>
               </TableRow>

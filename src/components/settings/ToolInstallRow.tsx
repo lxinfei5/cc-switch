@@ -8,7 +8,7 @@ import type { ToolInstallation } from "@/lib/api/settings";
 export function ToolInstallRow({ inst }: { inst: ToolInstallation }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-1.5 text-[10px]">
+    <div className="flex items-center gap-1.5 text-caption">
       <span className="shrink-0 rounded bg-background/80 px-1 py-0.5 font-mono text-muted-foreground">
         {inst.source}
       </span>
@@ -28,7 +28,7 @@ export function ToolInstallRow({ inst }: { inst: ToolInstallation }) {
         {inst.runnable ? inst.version : t("settings.toolConflictNotRunnable")}
       </span>
       {inst.is_path_default && (
-        <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-1 py-0.5 text-[9px] text-primary">
+        <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-1 py-0.5 text-caption text-primary">
           {t("settings.toolConflictDefault")}
         </span>
       )}

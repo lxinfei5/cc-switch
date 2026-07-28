@@ -244,10 +244,10 @@ export function UsageDashboard({
     >
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-2">
         <div className="flex flex-col gap-1">
-          <h2 className="text-2xl font-bold tracking-tight">
+          <h2 className="text-xl font-semibold tracking-tight">
             {t("usage.title")}
           </h2>
-          <p className="text-sm text-muted-foreground">{t("usage.subtitle")}</p>
+          <p className="text-xs text-muted-foreground">{t("usage.subtitle")}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -289,7 +289,7 @@ export function UsageDashboard({
             onValueChange={(v) => changeProviderName(decodeOptionValue(v))}
           >
             <SelectTrigger
-              className="h-9 w-[100px] bg-background text-xs focus:border-border-default [&>span]:min-w-0 [&>span]:truncate"
+              className="h-9 w-[120px] bg-background text-sm focus:border-border-default [&>span]:min-w-0 [&>span]:truncate"
               title={providerName ?? t("usage.filterBySource")}
             >
               <SelectValue />
@@ -314,7 +314,7 @@ export function UsageDashboard({
             onValueChange={(v) => setModel(decodeOptionValue(v))}
           >
             <SelectTrigger
-              className="h-9 w-[100px] bg-background text-xs focus:border-border-default [&>span]:min-w-0 [&>span]:truncate"
+              className="h-9 w-[140px] bg-background text-sm focus:border-border-default [&>span]:min-w-0 [&>span]:truncate"
               title={model ?? t("usage.filterByModel")}
             >
               <SelectValue />
@@ -340,7 +340,7 @@ export function UsageDashboard({
               onValueChange={(v) => changeRefreshInterval(Number(v))}
             >
               <SelectTrigger
-                className="h-9 w-[100px] bg-background text-xs focus:border-border-default"
+                className="h-9 w-[100px] bg-background text-sm focus:border-border-default"
                 title={t("usage.refreshInterval")}
                 aria-label={t("usage.refreshInterval")}
               >
@@ -452,10 +452,10 @@ export function UsageDashboard({
             <div className="flex items-center gap-3">
               <Coins className="h-5 w-5 text-yellow-500" />
               <div className="text-left">
-                <h3 className="text-base font-semibold">
+                <h3 className="text-lg font-semibold">
                   {t("settings.advanced.pricing.title")}
                 </h3>
-                <p className="text-sm text-muted-foreground font-normal">
+                <p className="text-xs text-muted-foreground font-normal">
                   {t("settings.advanced.pricing.description")}
                 </p>
               </div>
@@ -473,10 +473,10 @@ export function UsageDashboard({
             <div className="flex items-center gap-3">
               <DatabaseBackup className="h-5 w-5 text-orange-500" />
               <div className="text-left">
-                <h3 className="text-base font-semibold">
+                <h3 className="text-lg font-semibold">
                   {t("usage.rebuildCodex.title")}
                 </h3>
-                <p className="text-sm text-muted-foreground font-normal">
+                <p className="text-xs text-muted-foreground font-normal">
                   {t("usage.rebuildCodex.description")}
                 </p>
               </div>

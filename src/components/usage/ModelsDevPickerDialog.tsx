@@ -374,13 +374,13 @@ export function ModelsDevPickerDialog({
                               {entry.providerName}
                             </span>
                             {entry.releaseDate && (
-                              <span className="shrink-0 text-[10px] text-muted-foreground/70">
+                              <span className="shrink-0 text-caption text-muted-foreground/70">
                                 {entry.releaseDate}
                               </span>
                             )}
                           </div>
                           <div
-                            className="truncate font-mono text-xs text-muted-foreground"
+                            className="truncate text-xs text-muted-foreground"
                             title={entry.modelId}
                           >
                             {entry.normalizedId}
@@ -389,10 +389,10 @@ export function ModelsDevPickerDialog({
                         <div className="flex shrink-0 gap-3 text-right">
                           {priceColumns(entry).map((column) => (
                             <div key={column.label} className="w-16">
-                              <div className="text-[10px] text-muted-foreground">
+                              <div className="text-caption text-muted-foreground">
                                 {column.label}
                               </div>
-                              <div className="font-mono text-xs">
+                              <div className="text-sm tnum">
                                 ${formatPrice(column.value)}
                               </div>
                             </div>

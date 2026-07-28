@@ -75,22 +75,22 @@ export function ProviderStatsTable({
           ) : (
             stats?.map((stat) => (
               <TableRow key={stat.providerId}>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium" title={stat.providerName}>
                   {stat.providerName}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {stat.requestCount.toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {stat.totalTokens.toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {fmtUsd(stat.totalCost, 4)}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {stat.successRate.toFixed(1)}%
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right tnum">
                   {stat.avgLatencyMs}ms
                 </TableCell>
               </TableRow>

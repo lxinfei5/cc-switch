@@ -512,7 +512,7 @@ export function ProviderList({
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-caption text-muted-foreground">
                 <span>
                   {t("provider.searchScopeHint", {
                     defaultValue: "Matches provider name, notes, and URL.",

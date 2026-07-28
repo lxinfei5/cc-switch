@@ -269,7 +269,7 @@ export function UsageDateRangePicker({
           if (!isEndLive) setActiveField(field);
         }}
       >
-        <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="mb-1.5 text-caption font-medium uppercase tracking-wider text-muted-foreground">
           {label}
         </div>
         <div className="flex items-center gap-1.5">
@@ -322,7 +322,7 @@ export function UsageDateRangePicker({
         <Button
           type="button"
           variant={selection.preset === "custom" ? "default" : "outline"}
-          className="h-9 w-[100px] justify-start gap-1.5 text-xs"
+          className="h-9 w-[120px] justify-start gap-1.5 text-sm"
           title={triggerLabel}
         >
           <CalendarDays className="h-4 w-4 shrink-0" />
@@ -454,7 +454,7 @@ export function UsageDateRangePicker({
             </div>
 
             {/* Weekday headers */}
-            <div className="grid grid-cols-7 text-center text-[11px] text-muted-foreground mb-0.5">
+            <div className="grid grid-cols-7 text-center text-caption text-muted-foreground mb-0.5">
               {weekdayLabels.map((label, i) => (
                 <div key={i} className="py-0.5">
                   {label}

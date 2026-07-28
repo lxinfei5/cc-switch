@@ -75,7 +75,9 @@ export function RequestDetailPanel({
                 <dt className="text-muted-foreground">
                   {t("usage.requestId", "请求ID")}
                 </dt>
-                <dd className="font-mono">{request.requestId}</dd>
+                <dd className="break-all text-sm font-medium">
+                  {request.requestId}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">
@@ -95,7 +97,7 @@ export function RequestDetailPanel({
                   <span className="font-medium">
                     {request.providerName || t("usage.unknownProvider", "未知")}
                   </span>
-                  <span className="ml-2 font-mono text-xs text-muted-foreground">
+                  <span className="ml-2 text-xs text-muted-foreground">
                     {request.providerId}
                   </span>
                 </dd>
@@ -110,14 +112,14 @@ export function RequestDetailPanel({
                 <dt className="text-muted-foreground">
                   {t("usage.model", "模型")}
                 </dt>
-                <dd className="font-mono">{request.model}</dd>
+                <dd className="break-all font-medium">{request.model}</dd>
                 {request.requestModel &&
                   request.requestModel !== request.model && (
                     <>
                       <dt className="mt-1 text-muted-foreground">
                         {t("usage.requestModel", "请求模型")}
                       </dt>
-                      <dd className="font-mono text-xs">
+                      <dd className="text-sm">
                         {request.requestModel}
                       </dd>
                     </>
@@ -128,7 +130,7 @@ export function RequestDetailPanel({
                       <dt className="mt-1 text-muted-foreground">
                         {t("usage.pricingModel", "计价模型")}
                       </dt>
-                      <dd className="font-mono text-xs">
+                      <dd className="text-sm">
                         {request.pricingModel}
                       </dd>
                     </>
@@ -163,7 +165,7 @@ export function RequestDetailPanel({
                 <dt className="text-muted-foreground">
                   {t("usage.inputTokens", "输入 Tokens")}
                 </dt>
-                <dd className="font-mono">
+                <dd className="tnum break-all">
                   {freshInput.toLocaleString()}
                   {isCacheInclusive && (
                     <span className="ml-2 text-xs text-muted-foreground/70 font-normal">
@@ -177,7 +179,7 @@ export function RequestDetailPanel({
                 <dt className="text-muted-foreground">
                   {t("usage.outputTokens", "输出 Tokens")}
                 </dt>
-                <dd className="font-mono">
+                <dd className="tnum break-all">
                   {request.outputTokens.toLocaleString()}
                 </dd>
               </div>
@@ -185,7 +187,7 @@ export function RequestDetailPanel({
                 <dt className="text-muted-foreground">
                   {t("usage.cacheReadTokens", "缓存读取")}
                 </dt>
-                <dd className="font-mono">
+                <dd className="tnum break-all">
                   {request.cacheReadTokens.toLocaleString()}
                 </dd>
               </div>
@@ -193,7 +195,7 @@ export function RequestDetailPanel({
                 <dt className="text-muted-foreground">
                   {t("usage.cacheCreationTokens", "缓存写入")}
                 </dt>
-                <dd className="font-mono">
+                <dd className="tnum break-all">
                   {request.cacheCreationTokens.toLocaleString()}
                 </dd>
               </div>
@@ -201,7 +203,7 @@ export function RequestDetailPanel({
                 <dt className="text-muted-foreground">
                   {t("usage.totalTokens", "总计")}
                 </dt>
-                <dd className="text-lg font-semibold">
+                <dd className="text-xl font-semibold tnum">
                   {(freshInput + request.outputTokens).toLocaleString()}
                 </dd>
               </div>
@@ -221,7 +223,7 @@ export function RequestDetailPanel({
                     ({t("usage.baseCost", "基础")})
                   </span>
                 </dt>
-                <dd className="font-mono">
+                <dd className="tnum break-all">
                   ${parseFloat(request.inputCostUsd).toFixed(6)}
                 </dd>
               </div>
@@ -232,7 +234,7 @@ export function RequestDetailPanel({
                     ({t("usage.baseCost", "基础")})
                   </span>
                 </dt>
-                <dd className="font-mono">
+                <dd className="tnum break-all">
                   ${parseFloat(request.outputCostUsd).toFixed(6)}
                 </dd>
               </div>
@@ -243,7 +245,7 @@ export function RequestDetailPanel({
                     ({t("usage.baseCost", "基础")})
                   </span>
                 </dt>
-                <dd className="font-mono">
+                <dd className="tnum break-all">
                   ${parseFloat(request.cacheReadCostUsd).toFixed(6)}
                 </dd>
               </div>
@@ -254,7 +256,7 @@ export function RequestDetailPanel({
                     ({t("usage.baseCost", "基础")})
                   </span>
                 </dt>
-                <dd className="font-mono">
+                <dd className="tnum break-all">
                   ${parseFloat(request.cacheCreationCostUsd).toFixed(6)}
                 </dd>
               </div>
@@ -265,7 +267,7 @@ export function RequestDetailPanel({
                     <dt className="text-muted-foreground">
                       {t("usage.costMultiplier", "成本倍率")}
                     </dt>
-                    <dd className="font-mono">×{request.costMultiplier}</dd>
+                    <dd className="tnum break-all">×{request.costMultiplier}</dd>
                   </div>
                 )}
               <div
@@ -281,7 +283,7 @@ export function RequestDetailPanel({
                     )}
                 </dt>
                 <dd
-                  className={`text-lg font-semibold ${
+                  className={`text-xl font-semibold tnum ${
                     unpriced ? "text-muted-foreground" : "text-primary"
                   }`}
                 >
@@ -303,7 +305,7 @@ export function RequestDetailPanel({
                 <dt className="text-muted-foreground">
                   {t("usage.latency", "延迟")}
                 </dt>
-                <dd className="font-mono">{request.latencyMs}ms</dd>
+                <dd className="tnum break-all">{request.latencyMs}ms</dd>
               </div>
             </dl>
           </div>

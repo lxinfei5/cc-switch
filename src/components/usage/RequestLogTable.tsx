@@ -123,7 +123,7 @@ export function RequestLogTable({
               setPage(0);
             }}
           >
-            <SelectTrigger className="h-8 w-[100px] bg-background text-xs">
+            <SelectTrigger className="h-8 w-[110px] bg-background text-sm">
               <SelectValue placeholder={t("usage.statusCode")} />
             </SelectTrigger>
             <SelectContent>
@@ -198,7 +198,7 @@ export function RequestLogTable({
                     const unpriced = isUnpricedUsage(log);
                     return (
                       <TableRow key={log.requestId}>
-                        <TableCell className="text-center whitespace-nowrap text-xs px-1.5">
+                        <TableCell className="text-center whitespace-nowrap tnum">
                           {new Date(log.createdAt * 1000).toLocaleString(
                             locale,
                             {
@@ -209,12 +209,15 @@ export function RequestLogTable({
                             },
                           )}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell
+                          className="text-center max-w-[140px] truncate"
+                          title={log.providerName || undefined}
+                        >
                           {log.providerName || t("usage.unknownProvider")}
                         </TableCell>
-                        <TableCell className="text-center font-mono text-xs max-w-[200px]">
+                        <TableCell className="text-center max-w-[200px]">
                           <div
-                            className="truncate"
+                            className="truncate font-medium"
                             title={
                               log.requestModel && log.requestModel !== log.model
                                 ? `${log.requestModel} → ${log.model}`
@@ -225,7 +228,7 @@ export function RequestLogTable({
                             log.requestModel !== log.model ? (
                               <span>
                                 {log.requestModel}
-                                <span className="text-muted-foreground">
+                                <span className="text-muted-foreground font-normal">
                                   {" → "}
                                   {log.model}
                                 </span>
@@ -235,14 +238,14 @@ export function RequestLogTable({
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-center px-1.5">
+                        <TableCell className="text-center">
                           {(() => {
                             const freshInput = getFreshInputTokens(log);
                             const isCacheInclusive =
                               log.inputTokens !== freshInput;
                             return (
                               <div
-                                className="tabular-nums"
+                                className="tnum"
                                 title={
                                   isCacheInclusive
                                     ? `Raw: ${log.inputTokens.toLocaleString()}`
@@ -255,7 +258,7 @@ export function RequestLogTable({
                           })()}
                           {(log.cacheReadTokens > 0 ||
                             log.cacheCreationTokens > 0) && (
-                            <div className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            <div className="text-caption text-muted-foreground whitespace-nowrap tnum">
                               {[
                                 log.cacheReadTokens > 0 &&
                                   `R${fmtInt(log.cacheReadTokens, locale)}`,
@@ -267,12 +270,12 @@ export function RequestLogTable({
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-center tnum">
                           {fmtInt(log.outputTokens, locale)}
                         </TableCell>
-                        <TableCell className="text-center px-1.5">
+                        <TableCell className="text-center">
                           <div
-                            className={`font-medium tabular-nums ${
+                            className={`font-medium tnum ${
                               unpriced ? "text-muted-foreground" : ""
                             }`}
                           >
@@ -282,7 +285,7 @@ export function RequestLogTable({
                           </div>
                           {parseFiniteNumber(log.costMultiplier) != null &&
                             parseFiniteNumber(log.costMultiplier) !== 1 && (
-                              <div className="text-[11px] text-muted-foreground">
+                              <div className="text-caption text-muted-foreground tnum">
                                 ×
                                 {parseFiniteNumber(log.costMultiplier)?.toFixed(
                                   2,
@@ -290,7 +293,7 @@ export function RequestLogTable({
                               </div>
                             )}
                         </TableCell>
-                        <TableCell className="text-center whitespace-nowrap text-xs tabular-nums">
+                        <TableCell className="text-center whitespace-nowrap tnum">
                           {(log.latencyMs / 1000).toFixed(1)}s
                           {log.firstTokenMs != null && (
                             <span className="text-muted-foreground">
@@ -298,7 +301,7 @@ export function RequestLogTable({
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-center tnum font-medium">
                           <span
                             className={
                               log.statusCode >= 200 && log.statusCode < 300
@@ -309,7 +312,7 @@ export function RequestLogTable({
                             {log.statusCode}
                           </span>
                         </TableCell>
-                        <TableCell className="text-center text-xs text-muted-foreground">
+                        <TableCell className="text-center text-muted-foreground">
                           {log.dataSource || "proxy"}
                         </TableCell>
                       </TableRow>

@@ -4,8 +4,8 @@ import App from "./App";
 import { DatabaseUpgrade } from "./components/DatabaseUpgrade";
 import { UpdateProvider } from "./contexts/UpdateContext";
 import "./index.css";
-// 字体栈现统一由 tailwind.config.cjs 的 fontFamily.sans 提供（Latin 优先、中文回落雅黑/苹方、
-// 等宽优先 Monaco）。原「可插拔字体覆盖」已停用，恢复路径见 src/fonts/custom-fonts.css 注释。
+// 字体：英文 Monaco、中文微软雅黑；字号档位见 tailwind.config.cjs fontSize。
+// 参考/紧急覆盖说明：src/fonts/custom-fonts.css
 // 导入国际化配置
 import i18n from "./i18n";
 import { QueryClientProvider } from "@tanstack/react-query";

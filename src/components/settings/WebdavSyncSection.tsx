@@ -1076,7 +1076,7 @@ export function WebdavSyncSection({
             <div className="flex items-center gap-4">
               <label className="w-40 text-xs font-medium text-foreground shrink-0">
                 {t("settings.webdavSync.remoteRoot")}
-                <span className="block text-[10px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   {t("settings.webdavSync.remoteRootDefault")}
                 </span>
               </label>
@@ -1093,7 +1093,7 @@ export function WebdavSyncSection({
             <div className="flex items-center gap-4">
               <label className="w-40 text-xs font-medium text-foreground shrink-0">
                 {t("settings.webdavSync.profile")}
-                <span className="block text-[10px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   {t("settings.webdavSync.profileDefault")}
                 </span>
               </label>
@@ -1109,7 +1109,7 @@ export function WebdavSyncSection({
             <div className="flex items-start gap-4">
               <label className="w-40 text-xs font-medium text-foreground shrink-0">
                 {t("settings.webdavSync.autoSync")}
-                <span className="block text-[10px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   {t("settings.webdavSync.autoSyncHint")}
                 </span>
               </label>
@@ -1136,7 +1136,7 @@ export function WebdavSyncSection({
                 {t("settings.webdavSync.autoSyncLastErrorTitle")}
               </p>
               <p className="mt-1 break-all whitespace-pre-wrap">{lastError}</p>
-              <p className="mt-1 text-[11px] text-red-700/90 dark:text-red-300/80">
+              <p className="mt-1 text-caption text-red-700/90 dark:text-red-300/80">
                 {t("settings.webdavSync.autoSyncLastErrorHint")}
               </p>
             </div>
@@ -1336,7 +1336,7 @@ export function WebdavSyncSection({
             <div className="flex items-center gap-4">
               <label className="w-40 text-xs font-medium text-foreground shrink-0">
                 {t("settings.s3Sync.endpoint")}
-                <span className="block text-[10px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   {t("settings.s3Sync.endpointHint")}
                 </span>
               </label>
@@ -1356,7 +1356,7 @@ export function WebdavSyncSection({
             <div className="flex items-center gap-4">
               <label className="w-40 text-xs font-medium text-foreground shrink-0">
                 {t("settings.s3Sync.remoteRoot")}
-                <span className="block text-[10px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   {t("settings.s3Sync.remoteRootDefault")}
                 </span>
               </label>
@@ -1376,7 +1376,7 @@ export function WebdavSyncSection({
             <div className="flex items-center gap-4">
               <label className="w-40 text-xs font-medium text-foreground shrink-0">
                 {t("settings.s3Sync.profile")}
-                <span className="block text-[10px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   {t("settings.s3Sync.profileDefault")}
                 </span>
               </label>
@@ -1396,7 +1396,7 @@ export function WebdavSyncSection({
             <div className="flex items-start gap-4">
               <label className="w-40 text-xs font-medium text-foreground shrink-0">
                 {t("settings.s3Sync.autoSync")}
-                <span className="block text-[10px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   {t("settings.s3Sync.autoSyncHint")}
                 </span>
               </label>
@@ -1417,7 +1417,7 @@ export function WebdavSyncSection({
             <div className="flex items-start gap-4">
               <label className="w-40 text-xs font-medium text-foreground shrink-0">
                 {t("settings.s3Sync.enabled")}
-                <span className="block text-[10px] font-normal text-muted-foreground">
+                <span className="block text-caption font-normal text-muted-foreground">
                   {t("settings.s3Sync.enabledHint")}
                 </span>
               </label>
@@ -1449,7 +1449,7 @@ export function WebdavSyncSection({
               <p className="mt-1 break-all whitespace-pre-wrap">
                 {s3LastError}
               </p>
-              <p className="mt-1 text-[11px] text-red-700/90 dark:text-red-300/80">
+              <p className="mt-1 text-caption text-red-700/90 dark:text-red-300/80">
                 {t("settings.s3Sync.autoSyncLastErrorHint")}
               </p>
             </div>

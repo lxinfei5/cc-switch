@@ -709,7 +709,7 @@ export function OmoFormFields({
         className="font-mono text-xs min-h-[130px] py-3"
       />
       {showHint && (
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <p className="text-caption text-muted-foreground mt-1">
           {t("omo.advancedJsonHint", {
             defaultValue:
               "temperature, top_p, budgetTokens, prompt_append, permission, etc. Leave empty for defaults",
@@ -1080,7 +1080,7 @@ export function OmoFormFields({
         )}
         <Label className="text-sm font-semibold cursor-pointer">{title}</Label>
         {typeof badge === "string" ? (
-          <Badge variant="outline" className="text-[10px] h-5">
+          <Badge variant="outline" className="text-caption h-5">
             {badge}
           </Badge>
         ) : (
@@ -1143,7 +1143,7 @@ export function OmoFormFields({
   const renderCustomDivider = (label: string) => (
     <div className="flex items-center gap-2 py-2">
       <div className="flex-1 border-t border-border/40" />
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-caption text-muted-foreground">{label}</span>
       <div className="flex-1 border-t border-border/40" />
     </div>
   );
@@ -1216,7 +1216,7 @@ export function OmoFormFields({
         {localFilePath && (
           <span className="ml-1 text-primary/70">
             · {t("omo.source", { defaultValue: "from:" })}{" "}
-            <span className="font-mono text-[10px]">
+            <span className="font-mono text-caption">
               {localFilePath.replace(/^.*\//, "")}
             </span>
           </span>
@@ -1290,7 +1290,7 @@ export function OmoFormFields({
           !otherFieldsOpen && otherFieldsStr.trim() ? (
             <Badge
               variant="secondary"
-              className="text-[10px] h-5 font-mono max-w-[200px] truncate"
+              className="text-caption h-5 font-mono max-w-[200px] truncate"
             >
               {otherFieldsStr.trim().slice(0, 40)}
               {otherFieldsStr.trim().length > 40 ? "..." : ""}
@@ -1306,7 +1306,7 @@ export function OmoFormFields({
               className="font-mono text-xs min-h-[60px]"
             />
             {isSlim && (
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="mt-1 text-caption text-muted-foreground">
                 {t("omo.slimOtherFieldsHint", {
                   defaultValue:
                     "Use this area for top-level OMO Slim config such as council, fallback, multiplexer, disabled_mcps, and todoContinuation.",

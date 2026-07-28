@@ -62,7 +62,7 @@ export function ToolUpgradeConfirmDialog({
                 {displayName(plan.tool)}
               </div>
               {!plan.anchored && (
-                <div className="text-[10px] leading-snug text-yellow-600 dark:text-yellow-400">
+                <div className="text-caption leading-snug text-yellow-600 dark:text-yellow-400">
                   {t("settings.toolUpgradeUnanchoredHint")}
                 </div>
               )}
@@ -74,11 +74,11 @@ export function ToolUpgradeConfirmDialog({
                 ))}
               </ul>
               <div className="space-y-0.5">
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-caption text-muted-foreground">
                   {t("settings.toolUpgradeWillRun")}
                 </div>
                 <code
-                  className="block truncate rounded bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-foreground"
+                  className="block truncate rounded bg-background/80 px-1.5 py-0.5 font-mono text-caption text-foreground"
                   title={plan.command}
                 >
                   {plan.command}

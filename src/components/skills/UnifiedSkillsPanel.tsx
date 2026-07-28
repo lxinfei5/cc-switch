@@ -538,7 +538,7 @@ const InstalledSkillListItem: React.FC<InstalledSkillListItemProps> = ({
           {hasUpdate && (
             <Badge
               variant="outline"
-              className="shrink-0 text-[10px] px-1.5 py-0 h-4 border-amber-500 text-amber-600 dark:text-amber-400"
+              className="shrink-0 text-caption px-1.5 py-0 h-4 border-amber-500 text-amber-600 dark:text-amber-400"
             >
               {t("skills.updateAvailable")}
             </Badge>
@@ -667,7 +667,7 @@ const RestoreSkillsDialog: React.FC<RestoreSkillsDialogProps> = ({
                         <div className="font-medium text-sm text-foreground">
                           {backup.skill.name}
                         </div>
-                        <div className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                        <div className="rounded-md bg-muted px-2 py-0.5 text-caption text-muted-foreground">
                           {backup.skill.directory}
                         </div>
                       </div>

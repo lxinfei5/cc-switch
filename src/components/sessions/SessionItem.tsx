@@ -96,7 +96,7 @@ export function SessionItem({
           />
         </div>
 
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1 text-caption text-muted-foreground">
           <Clock className="size-3" />
           <span>
             {lastActive

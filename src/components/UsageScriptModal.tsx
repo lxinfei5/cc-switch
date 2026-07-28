@@ -1557,7 +1557,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
               <div className="space-y-3 text-xs">
                 <div>
                   <strong>{t("usageScript.configFormat")}</strong>
-                  <pre className="mt-1 p-2 bg-black/20 text-foreground rounded border border-white/10 text-[10px] overflow-x-auto">
+                  <pre className="mt-1 p-2 bg-black/20 text-foreground rounded border border-white/10 text-caption overflow-x-auto">
                     {`({
   request: {
     url: "{{baseUrl}}/api/usage",

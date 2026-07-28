@@ -51,7 +51,7 @@ export function SessionTocSidebar({
                 "flex items-start gap-2",
               )}
             >
-              <span className="shrink-0 w-4 h-4 rounded-full bg-primary/10 text-primary text-[10px] flex items-center justify-center font-medium">
+              <span className="shrink-0 w-4 h-4 rounded-full bg-primary/10 text-primary text-caption flex items-center justify-center font-medium">
                 {tocIndex + 1}
               </span>
               <span className="line-clamp-2 leading-snug">{item.preview}</span>

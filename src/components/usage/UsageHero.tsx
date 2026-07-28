@@ -258,7 +258,7 @@ export function UsageHero({
                   <AppGlyph appType={appType} accentClass={titleTheme.accent} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-0.5">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
                     {appLabel && (
                       <>
                         <span
@@ -273,7 +273,7 @@ export function UsageHero({
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span
-                      className="text-2xl md:text-3xl font-bold tabular-nums tracking-tight leading-none"
+                      className="text-2xl font-semibold tnum tracking-tight leading-none"
                       title={realTotal.toLocaleString()}
                     >
                       {realTotal.toLocaleString()}
@@ -286,21 +286,21 @@ export function UsageHero({
               </div>
 
               <div className="flex items-center gap-5 bg-background/50 px-4 py-2.5 rounded-xl border border-border/40 shadow-sm">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-caption text-muted-foreground font-medium">
                     {t("usage.totalRequests")}
                   </span>
-                  <span className="font-semibold flex items-center gap-1.5 text-sm tabular-nums">
+                  <span className="font-semibold flex items-center gap-1.5 text-sm tnum">
                     <Activity className="h-3.5 w-3.5 text-blue-500" />
                     {requests.toLocaleString()}
                   </span>
                 </div>
                 <div className="w-px h-8 bg-border/60" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-caption text-muted-foreground font-medium">
                     {t("usage.totalCost")}
                   </span>
-                  <span className="font-semibold text-green-500 text-sm tabular-nums">
+                  <span className="font-semibold text-green-500 text-sm tnum">
                     {totalCost == null ? "--" : fmtUsd(totalCost, 4)}
                   </span>
                 </div>
@@ -337,11 +337,11 @@ export function UsageHero({
               />
 
               <div className="col-span-2 lg:col-span-1 flex flex-col justify-center rounded-xl border border-border/40 bg-background/40 p-3 shadow-sm">
-                <div className="flex items-center justify-between text-[11px] mb-2">
+                <div className="flex items-center justify-between text-xs mb-2">
                   <span className="text-muted-foreground font-medium">
                     {t("usage.cacheHitRate", "缓存命中率")}
                   </span>
-                  <span className="font-bold text-emerald-500 tabular-nums">
+                  <span className="font-semibold text-emerald-500 tnum">
                     {hitPercentLabel}%
                   </span>
                 </div>
@@ -387,17 +387,17 @@ function MiniStat({
       title={tooltip}
     >
       <div
-        className={`flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground ${accent}`}
+        className={`flex items-center gap-1.5 text-xs font-medium text-muted-foreground ${accent}`}
       >
         {icon}
-        <span className="text-foreground/70 tracking-wide">{label}</span>
+        <span className="text-foreground/70">{label}</span>
         {tooltip && (
           <Info className="h-3 w-3 text-muted-foreground/60 shrink-0 ml-auto" />
         )}
       </div>
       <div
         className={cn(
-          "text-sm font-semibold tabular-nums",
+          "text-sm font-semibold tnum",
           muted && "text-muted-foreground/70",
         )}
       >

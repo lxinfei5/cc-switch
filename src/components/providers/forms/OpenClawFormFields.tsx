@@ -332,7 +332,7 @@ export function OpenClawFormFields({
                 {/* Role badge */}
                 <div className="flex items-center">
                   <span
-                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                    className={`text-caption font-medium px-1.5 py-0.5 rounded ${
                       index === 0
                         ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
                         : "bg-muted text-muted-foreground"

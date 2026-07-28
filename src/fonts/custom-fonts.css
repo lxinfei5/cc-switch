@@ -1,29 +1,29 @@
 /*
  * ──────────────────────────────────────────────────────────────────────────
- *  可插拔全局字体覆盖（已停用 / DISABLED）
+ *  App font stack (active via tailwind.config.cjs — this file is reference)
  * ──────────────────────────────────────────────────────────────────────────
  *
- *  现状：本文件已不再被 main.tsx 引入，字体栈统一收敛到 tailwind.config.cjs 的
- *  `fontFamily.sans`（Latin 优先 -apple-system/Inter/Segoe UI，中文回落
- *  PingFang SC / 微软雅黑 / Noto Sans CJK；等宽 fontFamily.mono 优先 Monaco）。
- *  这是「字体单一来源」的刻意设计，避免 config 与 override 双头漂移。
+ *  Policy:
+ *    - English / Latin  → Monaco
+ *    - Chinese / CJK    → Microsoft YaHei (微软雅黑), fallback PingFang SC
  *
- *  如何恢复「微软雅黑全局最优先（西文也用雅黑字形）」的旧行为：
- *  1) 把下面这段规则取消注释；
- *  2) 在 src/main.tsx 的 `import "./index.css";` 之后重新加一行
- *       import "./fonts/custom-fonts.css";
- *  即可（本文件在 index.css 之后加载，等特异性下后加载者胜出）。
+ *  Single source of truth is `fontFamily.sans` / `fontFamily.mono` in
+ *  tailwind.config.cjs. Do not re-declare competing stacks here unless you
+ *  intentionally need a temporary override (then import this file AFTER
+ *  index.css in main.tsx).
  *
- *  html, .font-sans {
- *    font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC",
- *      "Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC",
- *      "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont,
- *      "Helvetica Neue", Arial, sans-serif;
+ *  Type scale (tailwind fontSize):
+ *    caption 11px | xs 12px | sm/base 13px | lg 16px | xl 18px | 2xl 22px
+ *
+ *  Emergency override (only if you need to force-stack outside Tailwind):
+ *
+ *  html, body, .font-sans {
+ *    font-family: Monaco, "Microsoft YaHei", "微软雅黑", "PingFang SC",
+ *      "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
  *  }
  *  .font-mono, code, pre, kbd, samp, tt {
- *    font-family: Monaco, "Cascadia Code", "JetBrains Mono", "SF Mono",
- *      Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono",
- *      ui-monospace, "SFMono-Regular", monospace;
+ *    font-family: Monaco, "Microsoft YaHei", "微软雅黑", Menlo, Consolas,
+ *      monospace;
  *  }
  * ──────────────────────────────────────────────────────────────────────────
  */

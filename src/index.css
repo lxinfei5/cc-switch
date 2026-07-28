@@ -198,19 +198,37 @@ body::before {
   scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
 }
 
+/*
+ * Type scale (see tailwind.config.cjs fontSize):
+ *   caption 11px — micro labels / badges
+ *   xs       12px — secondary meta, table headers
+ *   sm/base  13px — default UI body (matches body below)
+ *   lg       16px — section titles
+ *   xl/2xl   18–22px — page titles / KPI display
+ * Fonts: English → Monaco; Chinese → Microsoft YaHei (fallback PingFang SC).
+ */
 html {
   @apply font-sans antialiased;
   line-height: 1.5;
   color-scheme: light;
   overscroll-behavior: none;
+  font-feature-settings: "tnum" 0;
 }
 
 body {
-  @apply m-0 p-0;
+  @apply m-0 p-0 font-sans;
   font-size: 13px;
   line-height: 1.5;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+}
+
+code,
+pre,
+kbd,
+samp,
+tt {
+  @apply font-mono;
 }
 
 html.dark {

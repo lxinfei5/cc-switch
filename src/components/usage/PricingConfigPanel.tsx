@@ -389,20 +389,20 @@ export function PricingConfigPanel() {
                 <TableBody>
                   {pricing.map((model) => (
                     <TableRow key={model.modelId}>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="font-medium" title={model.modelId}>
                         {model.modelId}
                       </TableCell>
                       <TableCell>{model.displayName}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tnum">
                         ${model.inputCostPerMillion}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tnum">
                         ${model.outputCostPerMillion}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tnum">
                         ${model.cacheReadCostPerMillion}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tnum">
                         ${model.cacheCreationCostPerMillion}
                       </TableCell>
                       <TableCell className="text-right">

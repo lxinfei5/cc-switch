@@ -563,7 +563,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
     <div className="flex flex-col gap-1">
       <div className="flex gap-2">
         {/* Y 轴刻度 */}
-        <div className="flex flex-col justify-between w-12 shrink-0 h-32 text-[11px] text-muted-foreground tnum text-right pr-1">
+        <div className="flex flex-col justify-between w-12 shrink-0 h-32 text-caption text-muted-foreground tnum text-right pr-1">
           {yTicks.map((v, i) => (
             <span key={i}>{v.toFixed(0)}</span>
           ))}
@@ -591,7 +591,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
             })}
           </div>
           {/* X 轴时间标签 */}
-          <div className="flex justify-between text-[11px] text-muted-foreground tnum mt-1 pl-0.5">
+          <div className="flex justify-between text-caption text-muted-foreground tnum mt-1 pl-0.5">
             <span>{formatBucketLabel(first.bucket, rangePreset)}</span>
             {points.length > 2 && mid && (
               <span className="opacity-70">
@@ -602,7 +602,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground pl-14">
+      <div className="flex items-center justify-between text-caption text-muted-foreground pl-14">
         <span>
           {t("tpsMonitor.trendYAxis", {
             defaultValue: "纵轴：平均 TPS (tok/s)",

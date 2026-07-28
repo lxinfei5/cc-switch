@@ -458,7 +458,7 @@ const DailyMemoryPanel: React.FC<DailyMemoryPanelProps> = ({
                           {formatFileSize(result.sizeBytes)}
                         </span>
                         {result.matchCount > 0 && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                          <span className="text-caption px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                             {t("workspace.dailyMemory.matchCount", {
                               count: result.matchCount,
                             })}

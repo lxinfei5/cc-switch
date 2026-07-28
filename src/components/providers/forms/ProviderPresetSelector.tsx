@@ -440,7 +440,7 @@ export function ProviderPresetSelector({
                 />
               ) : (
                 isPartner && (
-                  <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-md">
+                  <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-1.5 py-0.5 text-caption font-bold text-white shadow-md">
                     <Star className="h-2.5 w-2.5 fill-current" />
                   </span>
                 )
@@ -469,7 +469,7 @@ export function ProviderPresetSelector({
                 className="flex-shrink-0"
               />
               <span className="truncate">{preset.name}</span>
-              <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-md">
+              <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-1.5 py-0.5 text-caption font-bold text-white shadow-md">
                 <Layers className="h-2.5 w-2.5" />
               </span>
             </button>

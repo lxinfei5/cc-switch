@@ -70,7 +70,7 @@ export function AppSwitcher({
   });
 
   return (
-    <div className="inline-flex bg-muted rounded-xl p-1 gap-1">
+    <div className="inline-flex bg-muted rounded-xl p-1 gap-0.5">
       {appsToShow.map((app) => {
         const badgeConfig = APP_BADGE_ICON[app];
         const BadgeIcon = badgeConfig?.icon;
@@ -81,9 +81,9 @@ export function AppSwitcher({
             type="button"
             onClick={() => handleSwitch(app)}
             className={cn(
-              "group inline-flex items-center px-3 h-8 rounded-md text-sm font-medium transition-all duration-200",
+              "group inline-flex items-center px-2.5 h-7 rounded-lg text-xs font-medium transition-colors duration-150",
               isActive
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-background text-foreground shadow-1"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50",
             )}
           >
@@ -117,7 +117,7 @@ export function AppSwitcher({
             </span>
             <span
               className={cn(
-                "transition-all duration-200 whitespace-nowrap overflow-hidden",
+                "transition-all duration-150 whitespace-nowrap overflow-hidden",
                 compact
                   ? "max-w-0 opacity-0 ml-0"
                   : "max-w-[120px] opacity-100 ml-2",

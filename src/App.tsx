@@ -266,7 +266,7 @@ function App() {
   const { data: unmanagedSkills } = useScanUnmanagedSkills();
   const hasUnmanagedSkills = (unmanagedSkills?.length ?? 0) > 0;
   const addActionButtonClass =
-    "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600 text-white shadow-lg shadow-orange-500/30 dark:shadow-orange-500/40 rounded-full w-8 h-8";
+    "rounded-full h-8 w-8 bg-primary text-primary-foreground shadow-1 hover:bg-primary/90 active:scale-[0.98] transition-all duration-150";
 
   const {
     isRunning: isProxyRunning,
@@ -976,8 +976,8 @@ function App() {
           return <AgentsDefaultsPanel />;
         default:
           return (
-            <div className="px-6 flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="flex-1 overflow-y-auto overflow-x-hidden pb-12 px-1">
+            <div className="px-6 flex flex-col flex-1 min-h-0">
+              <div className="flex-1 pb-8">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeApp}
@@ -1048,10 +1048,10 @@ function App() {
         <motion.div
           key={currentView}
           className="flex-1 min-h-0"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
         >
           {content}
         </motion.div>
@@ -1061,7 +1061,7 @@ function App() {
 
   return (
     <div
-      className="flex flex-col h-screen overflow-hidden bg-background text-foreground selection:bg-primary/30 pb-4"
+      className="flex flex-col h-screen overflow-hidden bg-transparent text-foreground selection:bg-primary/30"
       style={{ overflowX: "hidden", paddingTop: contentTopOffset }}
     >
       {(dragBarHeight > 0 || useAppWindowControls) && (
@@ -1140,7 +1140,7 @@ function App() {
       )}
 
       <header
-        className="fixed z-50 w-full transition-all duration-300 bg-background/80 backdrop-blur-md"
+        className="fixed z-50 w-full glass-header"
         {...DRAG_REGION_ATTR}
         style={
           {
@@ -1209,23 +1209,23 @@ function App() {
                     rel="noreferrer"
                     className={cn(
                       "group inline-flex items-center gap-2 rounded-xl px-2.5 py-1",
-                      "glass-card transition-all duration-200 hover:-translate-y-px",
+                      "glass-card transition-shadow duration-200",
                       isProxyRunning && isCurrentAppTakeoverActive
-                        ? "shadow-[0_4px_18px_-6px_rgba(16,185,129,0.45)] hover:shadow-[0_8px_24px_-6px_rgba(16,185,129,0.6)]"
-                        : "shadow-[0_4px_18px_-6px_rgba(10,132,255,0.40)] hover:shadow-[0_8px_24px_-6px_rgba(10,132,255,0.55)]",
+                        ? "glass-card-success"
+                        : "glass-card-active",
                     )}
                   >
                     <span
                       className={cn(
-                        "inline-flex h-6 w-6 items-center justify-center rounded-md text-white shadow-sm transition-colors",
+                        "inline-flex h-6 w-6 items-center justify-center rounded-md text-white shadow-1 transition-colors",
                         isProxyRunning && isCurrentAppTakeoverActive
-                          ? "bg-gradient-to-br from-emerald-400 to-emerald-600"
-                          : "bg-gradient-to-br from-blue-400 to-blue-600",
+                          ? "bg-success"
+                          : "bg-primary",
                       )}
                     >
                       <ArrowLeftRight className="h-3.5 w-3.5" />
                     </span>
-                    <span className="text-xl font-semibold tracking-tight text-foreground">
+                    <span className="text-lg font-semibold tracking-tight text-foreground">
                       CC Switch
                     </span>
                   </a>
@@ -1238,7 +1238,7 @@ function App() {
                     setCurrentView("settings");
                   }}
                   title={t("common.settings")}
-                  className="hover:bg-black/5 dark:hover:bg-white/5"
+                  className="toolbar-btn"
                 >
                   <Settings className="w-4 h-4" />
                 </Button>
@@ -1259,7 +1259,7 @@ function App() {
                     title={t("usage.title", {
                       defaultValue: "使用统计",
                     })}
-                    className="hover:bg-black/5 dark:hover:bg-white/5"
+                    className="toolbar-btn"
                   >
                     <BarChart2 className="w-4 h-4" />
                   </Button>
@@ -1312,7 +1312,7 @@ function App() {
                     variant="ghost"
                     size="sm"
                     onClick={() => promptPanelRef.current?.openAdd()}
-                    className="hover:bg-black/5 dark:hover:bg-white/5"
+                    className="toolbar-btn"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {t("prompts.add")}
@@ -1324,7 +1324,7 @@ function App() {
                       variant="ghost"
                       size="sm"
                       onClick={() => mcpPanelRef.current?.openImport()}
-                      className="hover:bg-black/5 dark:hover:bg-white/5"
+                      className="toolbar-btn"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       {t("mcp.importExisting")}
@@ -1333,7 +1333,7 @@ function App() {
                       variant="ghost"
                       size="sm"
                       onClick={() => mcpPanelRef.current?.openAdd()}
-                      className="hover:bg-black/5 dark:hover:bg-white/5"
+                      className="toolbar-btn"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       {t("mcp.addMcp")}
@@ -1348,7 +1348,7 @@ function App() {
                       onClick={() =>
                         unifiedSkillsPanelRef.current?.openRestoreFromBackup()
                       }
-                      className="hover:bg-black/5 dark:hover:bg-white/5"
+                      className="toolbar-btn"
                     >
                       <History className="w-4 h-4 mr-2" />
                       {t("skills.restoreFromBackup.button")}
@@ -1359,7 +1359,7 @@ function App() {
                       onClick={() =>
                         unifiedSkillsPanelRef.current?.openInstallFromZip()
                       }
-                      className="hover:bg-black/5 dark:hover:bg-white/5"
+                      className="toolbar-btn"
                     >
                       <FolderArchive className="w-4 h-4 mr-2" />
                       {t("skills.installFromZip.button")}
@@ -1370,7 +1370,7 @@ function App() {
                       onClick={() =>
                         unifiedSkillsPanelRef.current?.openImport()
                       }
-                      className="relative hover:bg-black/5 dark:hover:bg-white/5"
+                      className="toolbar-btn relative"
                       title={
                         hasUnmanagedSkills
                           ? t("skills.unmanagedAvailable")
@@ -1390,7 +1390,7 @@ function App() {
                       variant="ghost"
                       size="sm"
                       onClick={handleOpenSkillsDiscovery}
-                      className="hover:bg-black/5 dark:hover:bg-white/5"
+                      className="toolbar-btn"
                     >
                       <Search className="w-4 h-4 mr-2" />
                       {t("skills.discover")}
@@ -1406,7 +1406,7 @@ function App() {
                           variant="ghost"
                           size="sm"
                           onClick={() => execute(skillsPageRef.current)}
-                          className="hover:bg-black/5 dark:hover:bg-white/5"
+                          className="toolbar-btn"
                         >
                           <Icon className="w-4 h-4 mr-2" />
                           {t(labelKey)}
@@ -1448,7 +1448,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("skills")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("skills.manage")}
                               >
                                 <Wrench className="w-4 h-4" />
@@ -1457,7 +1457,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("hermesMemory")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("hermes.memory.title")}
                               >
                                 <Brain className="w-4 h-4" />
@@ -1466,7 +1466,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => void openHermesWebUI()}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("hermes.webui.open")}
                               >
                                 <LayoutDashboard className="w-4 h-4" />
@@ -1475,7 +1475,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("mcp")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("mcp.title")}
                               >
                                 <McpIcon size={16} />
@@ -1487,7 +1487,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("workspace")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("workspace.manage")}
                               >
                                 <FolderOpen className="w-4 h-4" />
@@ -1496,7 +1496,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("openclawEnv")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("openclaw.env.title")}
                               >
                                 <KeyRound className="w-4 h-4" />
@@ -1505,7 +1505,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("openclawTools")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("openclaw.tools.title")}
                               >
                                 <Shield className="w-4 h-4" />
@@ -1514,7 +1514,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("openclawAgents")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("openclaw.agents.title")}
                               >
                                 <Cpu className="w-4 h-4" />
@@ -1523,7 +1523,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("sessions")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("sessionManager.title")}
                               >
                                 <History className="w-4 h-4" />
@@ -1536,7 +1536,7 @@ function App() {
                                 size="sm"
                                 onClick={() => setCurrentView("skills")}
                                 className={cn(
-                                  "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5",
+                                  "toolbar-btn",
                                   "transition-all duration-200 ease-in-out overflow-hidden",
                                   hasSkillsSupport
                                     ? "opacity-100 w-8 scale-100 px-2"
@@ -1550,7 +1550,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("prompts")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("prompts.manage")}
                               >
                                 <Book className="w-4 h-4" />
@@ -1560,7 +1560,7 @@ function App() {
                                 size="sm"
                                 onClick={() => setCurrentView("sessions")}
                                 className={cn(
-                                  "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5",
+                                  "toolbar-btn",
                                   "transition-all duration-200 ease-in-out overflow-hidden",
                                   hasSessionSupport
                                     ? "opacity-100 w-8 scale-100 px-2"
@@ -1574,7 +1574,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("mcp")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("mcp.title")}
                               >
                                 <McpIcon size={16} />
@@ -1584,7 +1584,7 @@ function App() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCurrentView("tpsMonitor")}
-                                className="text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 w-8 px-2"
+                                className="toolbar-btn w-8 px-2"
                                 title={t("tpsMonitor.title", {
                                   defaultValue: "TPS 监控",
                                 })}

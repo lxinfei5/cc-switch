@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import { GripVertical, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {
   DraggableAttributes,
@@ -296,31 +296,18 @@ export function ProviderCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-border p-4 transition-all duration-300",
-        "bg-card text-card-foreground group",
+        "relative overflow-hidden rounded-xl p-4 transition-all duration-200",
+        "glass-card text-card-foreground group",
         isAutoFailoverEnabled || isProxyTakeover
-          ? "hover:border-emerald-500/50"
-          : "hover:border-border-active",
-        shouldUseGreen &&
-          "border-emerald-500/60 shadow-sm shadow-emerald-500/10",
-        shouldUseBlue && "border-blue-500/60 shadow-sm shadow-blue-500/10",
-        !(isActiveProvider || hasPersistentConfigHighlight) &&
-          "hover:shadow-sm",
+          ? "hover:border-success/50"
+          : "hover:border-border-hover",
+        shouldUseGreen && "glass-card-success",
+        shouldUseBlue && "glass-card-active",
+        !(isActiveProvider || hasPersistentConfigHighlight) && "hover:shadow-2",
         dragHandleProps?.isDragging &&
-          "cursor-grabbing border-primary shadow-lg scale-105 z-10",
+          "cursor-grabbing border-primary shadow-3 scale-[1.02] z-10",
       )}
     >
-      <div
-        className={cn(
-          "absolute inset-0 bg-gradient-to-r to-transparent transition-opacity duration-500 pointer-events-none",
-          shouldUseGreen && "from-emerald-500/10",
-          shouldUseBlue && "from-blue-500/10",
-          !shouldUseGreen && !shouldUseBlue && "from-primary/10",
-          isActiveProvider || hasPersistentConfigHighlight
-            ? "opacity-100"
-            : "opacity-0",
-        )}
-      />
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
@@ -439,12 +426,12 @@ export function ProviderCard({
               {provider.category === "third_party" &&
                 provider.meta?.isPartner && (
                   <span
-                    className="text-yellow-500 dark:text-yellow-400"
+                    className="inline-flex items-center text-warning"
                     title={t("provider.officialPartner", {
                       defaultValue: "官方合作伙伴",
                     })}
                   >
-                    ⭐
+                    <Star className="h-3.5 w-3.5 fill-current" />
                   </span>
                 )}
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { Panel } from "@/components/ui/panel";
 import { RefreshCw, AlertCircle, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { type AppId } from "@/lib/api";
@@ -114,7 +115,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
     }
 
     return (
-      <div className="mt-3 rounded-xl border border-border-default bg-card px-4 py-3 shadow-sm">
+      <Panel className="mt-3">
         <div className="flex items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-red-500 dark:text-red-400">
             <AlertCircle size={14} />
@@ -125,13 +126,13 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
           <button
             onClick={() => refetch()}
             disabled={loading}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 flex-shrink-0"
+            className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-50 flex-shrink-0"
             title={t("usage.refreshUsage")}
           >
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
-      </div>
+      </Panel>
     );
   }
 
@@ -223,10 +224,10 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
           {/* 已用 */}
           {firstUsage.used !== undefined && (
             <div className="flex items-center gap-0.5">
-              <span className="text-gray-500 dark:text-gray-400">
+              <span className="text-muted-foreground">
                 {t("usage.used")}
               </span>
-              <span className="tabular-nums text-gray-600 dark:text-gray-400 font-medium">
+              <span className="tabular-nums text-muted-foreground font-medium">
                 {firstUsage.used.toFixed(2)}
               </span>
             </div>
@@ -235,7 +236,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
           {/* 剩余 */}
           {firstUsage.remaining !== undefined && (
             <div className="flex items-center gap-0.5">
-              <span className="text-gray-500 dark:text-gray-400">
+              <span className="text-muted-foreground">
                 {t("usage.remaining")}
               </span>
               <span
@@ -255,7 +256,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
 
           {/* 单位 */}
           {firstUsage.unit && (
-            <span className="text-gray-500 dark:text-gray-400">
+            <span className="text-muted-foreground">
               {firstUsage.unit}
             </span>
           )}
@@ -263,7 +264,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
           {/* 扩展字段 extra */}
           {firstUsage.extra && (
             <span
-              className="text-gray-500 dark:text-gray-400 truncate max-w-[150px]"
+              className="text-muted-foreground truncate max-w-[150px]"
               title={firstUsage.extra}
             >
               {firstUsage.extra}
@@ -275,10 +276,10 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-border-default bg-card px-4 py-3 shadow-sm">
+    <Panel className="mt-3">
       {/* 标题行：包含刷新按钮和自动查询时间 */}
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+        <span className="text-xs text-muted-foreground font-medium">
           {t("usage.planUsage")}
         </span>
         <div className="flex items-center gap-2">
@@ -306,7 +307,7 @@ const UsageFooter: React.FC<UsageFooterProps> = ({
           <UsagePlanItem key={index} data={usageData} />
         ))}
       </div>
-    </div>
+    </Panel>
   );
 };
 
@@ -333,7 +334,7 @@ const UsagePlanItem: React.FC<{ data: UsageData }> = ({ data }) => {
     <div className="flex items-center gap-3">
       {/* 标题部分：25% */}
       <div
-        className="text-xs text-gray-500 dark:text-gray-400 min-w-0"
+        className="text-xs text-muted-foreground min-w-0"
         style={{ width: "25%" }}
       >
         {planName ? (
@@ -350,7 +351,7 @@ const UsagePlanItem: React.FC<{ data: UsageData }> = ({ data }) => {
 
       {/* 扩展字段：30% */}
       <div
-        className="text-xs text-gray-500 dark:text-gray-400 min-w-0 flex items-center gap-2"
+        className="text-xs text-muted-foreground min-w-0 flex items-center gap-2"
         style={{ width: "30%" }}
       >
         {extra && (
@@ -376,33 +377,33 @@ const UsagePlanItem: React.FC<{ data: UsageData }> = ({ data }) => {
         {/* 总额度 */}
         {total !== undefined && (
           <>
-            <span className="text-gray-500 dark:text-gray-400">
+            <span className="text-muted-foreground">
               {t("usage.total")}
             </span>
-            <span className="tabular-nums text-gray-600 dark:text-gray-400">
+            <span className="tabular-nums text-muted-foreground">
               {total === -1 ? "∞" : total.toFixed(2)}
             </span>
-            <span className="text-gray-400 dark:text-gray-600">|</span>
+            <span className="text-muted-foreground/50">|</span>
           </>
         )}
 
         {/* 已用额度 */}
         {used !== undefined && (
           <>
-            <span className="text-gray-500 dark:text-gray-400">
+            <span className="text-muted-foreground">
               {t("usage.used")}
             </span>
-            <span className="tabular-nums text-gray-600 dark:text-gray-400">
+            <span className="tabular-nums text-muted-foreground">
               {used.toFixed(2)}
             </span>
-            <span className="text-gray-400 dark:text-gray-600">|</span>
+            <span className="text-muted-foreground/50">|</span>
           </>
         )}
 
         {/* 剩余额度 - 突出显示 */}
         {remaining !== undefined && (
           <>
-            <span className="text-gray-500 dark:text-gray-400">
+            <span className="text-muted-foreground">
               {t("usage.remaining")}
             </span>
             <span
@@ -420,7 +421,7 @@ const UsagePlanItem: React.FC<{ data: UsageData }> = ({ data }) => {
         )}
 
         {unit && (
-          <span className="text-gray-500 dark:text-gray-400">{unit}</span>
+          <span className="text-muted-foreground">{unit}</span>
         )}
       </div>
     </div>

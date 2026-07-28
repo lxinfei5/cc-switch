@@ -1,4 +1,5 @@
 import React from "react";
+import { Panel } from "@/components/ui/panel";
 import { RefreshCw, AlertCircle, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AppId } from "@/lib/api";
@@ -192,7 +193,7 @@ export const SubscriptionQuotaView: React.FC<SubscriptionQuotaViewProps> = ({
       );
     }
     return (
-      <div className="mt-3 rounded-xl border border-border-default bg-card px-4 py-3 shadow-sm">
+      <Panel className="mt-3">
         <div className="flex items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-red-500 dark:text-red-400">
             <AlertCircle size={14} />
@@ -201,13 +202,13 @@ export const SubscriptionQuotaView: React.FC<SubscriptionQuotaViewProps> = ({
           <button
             onClick={() => refetch()}
             disabled={loading}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 flex-shrink-0"
+            className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-50 flex-shrink-0"
             title={t("subscription.refresh")}
           >
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
-      </div>
+      </Panel>
     );
   }
 
@@ -256,9 +257,9 @@ export const SubscriptionQuotaView: React.FC<SubscriptionQuotaViewProps> = ({
 
   // ── 展开模式：详细信息 ──
   return (
-    <div className="mt-3 rounded-xl border border-border-default bg-card px-4 py-3 shadow-sm">
+    <Panel className="mt-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+        <span className="text-xs text-muted-foreground font-medium">
           {t("subscription.title", { defaultValue: "Subscription Quota" })}
         </span>
         <div className="flex items-center gap-2">
@@ -287,7 +288,7 @@ export const SubscriptionQuotaView: React.FC<SubscriptionQuotaViewProps> = ({
 
       {/* 超额使用 */}
       {quota.extraUsage?.isEnabled && (
-        <div className="mt-2 pt-2 border-t border-border-default text-xs text-gray-500 dark:text-gray-400">
+        <div className="mt-2 pt-2 border-t border-border-default text-xs text-muted-foreground">
           <span className="font-medium">{t("subscription.extraUsage")}: </span>
           <span className="tabular-nums">
             {quota.extraUsage.currency === "USD" ? "$" : ""}
@@ -302,7 +303,7 @@ export const SubscriptionQuotaView: React.FC<SubscriptionQuotaViewProps> = ({
           </span>
         </div>
       )}
-    </div>
+    </Panel>
   );
 };
 
@@ -320,7 +321,7 @@ export const TierBadge: React.FC<{
 
   return (
     <div className="flex items-center gap-0.5">
-      <span className="text-gray-500 dark:text-gray-400">{label}:</span>
+      <span className="text-muted-foreground">{label}:</span>
       <span
         className={`font-semibold tabular-nums ${utilizationColor(tier.utilization)}`}
       >
@@ -354,14 +355,14 @@ const TierBar: React.FC<{
   return (
     <div className="flex items-center gap-3 text-xs">
       <span
-        className="text-gray-500 dark:text-gray-400 min-w-0 font-medium"
+        className="text-muted-foreground min-w-0 font-medium"
         style={{ width: "25%" }}
       >
         {label}
       </span>
 
       {/* 进度条 */}
-      <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${
             tier.utilization >= 90

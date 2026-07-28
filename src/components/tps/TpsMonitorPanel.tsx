@@ -199,7 +199,7 @@ export default function TpsMonitorPanel() {
       {/* 标题栏：开关 + 清空 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Gauge className="w-5 h-5 text-blue-500" />
+          <Gauge className="w-5 h-5 text-primary" />
           <span className="text-sm text-muted-foreground">
             {t("tpsMonitor.subtitle", {
               defaultValue:
@@ -236,7 +236,7 @@ export default function TpsMonitorPanel() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-500" />
+              <Users className="w-4 h-4 text-success" />
               {t("tpsMonitor.concurrencyTitle", { defaultValue: "并发监控" })}
             </CardTitle>
             <Button
@@ -465,23 +465,23 @@ export default function TpsMonitorPanel() {
                         : s.tps;
                     return (
                       <TableRow key={s.id}>
-                        <TableCell className="font-mono text-xs whitespace-nowrap">
+                        <TableCell className="tnum text-xs whitespace-nowrap">
                           {new Date(s.createdAt * 1000).toLocaleTimeString()}
                         </TableCell>
                         <TableCell className="text-xs">{s.appType}</TableCell>
                         <TableCell className="font-mono text-xs">
                           {s.model}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-xs">
+                        <TableCell className="text-right tnum text-xs">
                           {s.outputTokens.toLocaleString()}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        <TableCell className="text-right tnum text-xs text-muted-foreground">
                           {s.durationMs != null
                             ? `${s.durationMs.toLocaleString()} ms`
                             : "—"}
                         </TableCell>
                         <TableCell
-                          className="text-right font-mono text-xs"
+                          className="text-right tnum text-xs"
                           title={
                             s.firstTokenMs != null
                               ? `first_token=${s.firstTokenMs}ms`
@@ -490,13 +490,13 @@ export default function TpsMonitorPanel() {
                         >
                           {gen != null ? `${gen.toLocaleString()} ms` : "—"}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-xs">
+                        <TableCell className="text-right tnum text-xs">
                           <span
                             className={cn(
                               displayTps >= 50
-                                ? "text-emerald-500"
+                                ? "text-success"
                                 : displayTps >= 10
-                                  ? "text-blue-500"
+                                  ? "text-primary"
                                   : "text-muted-foreground",
                             )}
                           >
@@ -560,7 +560,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
     <div className="flex flex-col gap-1">
       <div className="flex gap-2">
         {/* Y 轴刻度 */}
-        <div className="flex flex-col justify-between w-12 shrink-0 h-32 text-[10px] text-muted-foreground font-mono text-right pr-1">
+        <div className="flex flex-col justify-between w-12 shrink-0 h-32 text-[10px] text-muted-foreground tnum text-right pr-1">
           {yTicks.map((v, i) => (
             <span key={i}>{v.toFixed(0)}</span>
           ))}
@@ -587,7 +587,7 @@ function TrendChart({ points, maxTps, rangePreset, t }: TrendChartProps) {
             })}
           </div>
           {/* X 轴时间标签 */}
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono mt-1 pl-0.5">
+          <div className="flex justify-between text-[10px] text-muted-foreground tnum mt-1 pl-0.5">
             <span>{formatBucketLabel(first.bucket, rangePreset)}</span>
             {points.length > 2 && mid && (
               <span className="opacity-70">
@@ -627,7 +627,7 @@ function StatCard({ icon, label, value, unit, loading }: StatCardProps) {
           {label}
         </div>
         <div className="flex items-baseline gap-1">
-          <span className="text-xl font-semibold font-mono">
+          <span className="text-xl font-semibold tnum">
             {loading ? "—" : value}
           </span>
           {unit && (
@@ -647,12 +647,12 @@ interface ConcurrencyStatProps {
 
 function ConcurrencyStat({ label, value, accent }: ConcurrencyStatProps) {
   return (
-    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+    <div className="rounded-xl border border-border/60 bg-muted/40 px-3 py-2">
       <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
       <div
         className={cn(
-          "text-2xl font-semibold font-mono",
-          accent === "emerald" ? "text-emerald-500" : "text-blue-500",
+          "text-2xl font-semibold tnum",
+          accent === "emerald" ? "text-success" : "text-primary",
         )}
       >
         {value}
@@ -728,19 +728,19 @@ function BreakdownCard({
                         {r.appType ?? "—"}
                       </TableCell>
                     )}
-                    <TableCell className="text-right font-mono text-xs">
+                    <TableCell className="text-right tnum text-xs">
                       {r.sampleCount.toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-blue-500">
+                    <TableCell className="text-right tnum text-xs text-primary">
                       {r.avgTps.toFixed(1)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-emerald-500">
+                    <TableCell className="text-right tnum text-xs text-success">
                       {r.maxTps.toFixed(1)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs">
+                    <TableCell className="text-right tnum text-xs">
                       {r.p95Tps.toFixed(1)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs">
+                    <TableCell className="text-right tnum text-xs">
                       {r.totalOutputTokens.toLocaleString()}
                     </TableCell>
                   </TableRow>

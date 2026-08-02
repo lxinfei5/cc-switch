@@ -242,6 +242,7 @@ impl Database {
                 request_id TEXT NOT NULL,
                 app_type TEXT NOT NULL,
                 provider_id TEXT NOT NULL,
+                provider_name TEXT,
                 model TEXT NOT NULL,
                 output_tokens INTEGER NOT NULL DEFAULT 0,
                 first_token_ms INTEGER,
@@ -260,6 +261,21 @@ impl Database {
         .map_err(|e| AppError::Database(e.to_string()))?;
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_tps_samples_app_created ON tps_samples(app_type, created_at DESC)",
+            [],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+        // Provider 名称归档表：provider 删除时快照其展示名，供历史用量 / TPS
+        // 在删除后仍能读到可读名称（读侧 COALESCE 优先实时 providers.name，
+        // 其次归档名，最后才回退 provider_id）。仅删除会写入，行数极少。
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS provider_name_archive (
+                provider_id TEXT NOT NULL,
+                app_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                deleted_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (provider_id, app_type)
+            )",
             [],
         )
         .map_err(|e| AppError::Database(e.to_string()))?;
@@ -548,6 +564,11 @@ impl Database {
                         log::info!("迁移数据库从 v16 到 v17（添加 TPS 监控样本表）");
                         Self::migrate_v16_to_v17(conn)?;
                         Self::set_user_version(conn, 17)?;
+                    }
+                    17 => {
+                        log::info!("迁移数据库从 v17 到 v18（tps_samples 冗余 provider_name）");
+                        Self::migrate_v17_to_v18(conn)?;
+                        Self::set_user_version(conn, 18)?;
                     }
                     _ => {
                         return Err(AppError::Database(format!(
@@ -1611,6 +1632,52 @@ impl Database {
             [],
         )
         .map_err(|e| AppError::Database(format!("v16 -> v17 创建 tps_samples 应用索引失败: {e}")))?;
+        Ok(())
+    }
+
+    /// v17 -> v18 迁移：为 tps_samples 冗余 provider_name（本地定制）
+    ///
+    /// 背景：TPS 按 Provider 分组的展示名来自 LEFT JOIN providers，provider 被删除后
+    /// JOIN 落空、回退成原始 provider_id（UUID）。为了在 provider 删除后仍能展示可读
+    /// 名称，写入样本时把当时的名字冗余进本列；读侧 `COALESCE(t.provider_name, p.name, ...)`。
+    ///
+    /// 回填：对仍存在的 provider，把名字从 providers 表补到历史行；已删除 provider 的
+    /// 历史行名字已不可恢复，保持 NULL（读侧回退 provider_id）。
+    fn migrate_v17_to_v18(conn: &Connection) -> Result<(), AppError> {
+        if !Self::table_exists(conn, "tps_samples")? {
+            // 理论上 v16->v17 已建表；防御旧库路径，直接建表保证后续 ALTER 不失败。
+            Self::migrate_v16_to_v17(conn)?;
+        }
+        Self::add_column_if_missing(conn, "tps_samples", "provider_name", "TEXT")?;
+        // 回填依赖 providers 表；真实库必存在，此处仅防御隔离测试的最小 schema。
+        if !Self::table_exists(conn, "providers")? {
+            return Ok(());
+        }
+        conn.execute(
+            "UPDATE tps_samples
+             SET provider_name = (
+                 SELECT p.name FROM providers p
+                 WHERE p.id = tps_samples.provider_id AND p.app_type = tps_samples.app_type
+             )
+             WHERE EXISTS (
+                 SELECT 1 FROM providers p
+                 WHERE p.id = tps_samples.provider_id AND p.app_type = tps_samples.app_type
+             )",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("v17 -> v18 回填 tps_samples.provider_name 失败: {e}")))?;
+        // 创建 Provider 名称归档表：删除时快照名字，供 Usage / TPS 读侧兜底展示。
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS provider_name_archive (
+                provider_id TEXT NOT NULL,
+                app_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                deleted_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (provider_id, app_type)
+            )",
+            [],
+        )
+        .map_err(|e| AppError::Database(format!("v17 -> v18 创建 provider_name_archive 表失败: {e}")))?;
         Ok(())
     }
 
@@ -3324,6 +3391,55 @@ mod tests {
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
         )?;
         assert_eq!(counts, (0, 1, 0, 1));
+        Ok(())
+    }
+
+    #[test]
+    fn migrate_v17_to_v18_adds_provider_name_and_backfills() -> Result<(), AppError> {
+        let conn = Connection::open_in_memory()?;
+        // 模拟 v17 形状的库：tps_samples 尚无 provider_name 列
+        conn.execute_batch(
+            "CREATE TABLE providers (
+                id TEXT NOT NULL, app_type TEXT NOT NULL, name TEXT NOT NULL,
+                settings_config TEXT NOT NULL, PRIMARY KEY (id, app_type)
+            );
+            CREATE TABLE tps_samples (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                request_id TEXT NOT NULL, app_type TEXT NOT NULL,
+                provider_id TEXT NOT NULL, model TEXT NOT NULL,
+                output_tokens INTEGER NOT NULL DEFAULT 0,
+                first_token_ms INTEGER, duration_ms INTEGER,
+                is_streaming INTEGER NOT NULL DEFAULT 0,
+                tps REAL NOT NULL DEFAULT 0, created_at INTEGER NOT NULL
+            );
+            INSERT INTO providers (id, app_type, name, settings_config) VALUES
+                ('p-1', 'claude', 'My Provider', '{}');
+            INSERT INTO tps_samples
+                (request_id, app_type, provider_id, model, output_tokens, tps, created_at)
+            VALUES
+                ('r-1', 'claude', 'p-1', 'm', 100, 10, 1),
+                ('r-2', 'claude', 'p-deleted', 'm', 100, 10, 1);",
+        )?;
+        Database::set_user_version(&conn, 17)?;
+
+        Database::apply_schema_migrations_on_conn(&conn)?;
+
+        assert_eq!(Database::get_user_version(&conn)?, SCHEMA_VERSION);
+        assert!(Database::has_column(&conn, "tps_samples", "provider_name")?);
+        assert!(Database::table_exists(&conn, "provider_name_archive")?);
+        let names: Vec<(String, Option<String>)> = {
+            let mut stmt =
+                conn.prepare("SELECT provider_id, provider_name FROM tps_samples ORDER BY request_id")?;
+            let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+            rows.collect::<Result<_, _>>()?
+        };
+        assert_eq!(
+            names,
+            vec![
+                ("p-1".to_string(), Some("My Provider".to_string())),
+                ("p-deleted".to_string(), None),
+            ]
+        );
         Ok(())
     }
 }

@@ -2,7 +2,7 @@ use crate::database::{lock_conn, Database};
 use crate::error::AppError;
 use crate::provider::{Provider, ProviderMeta};
 use indexmap::IndexMap;
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 use std::collections::{HashMap, HashSet};
 
 type OmoProviderRow = (
@@ -177,6 +177,24 @@ impl Database {
         }
     }
 
+    /// 仅取 provider 展示名（轻量查询，供 TPS 写入侧冗余名字用）。
+    ///
+    /// provider 已删除时返回 None，调用方据此回退到 provider_id。
+    pub fn get_provider_name(
+        &self,
+        id: &str,
+        app_type: &str,
+    ) -> Result<Option<String>, AppError> {
+        let conn = lock_conn!(self.conn);
+        conn.query_row(
+            "SELECT name FROM providers WHERE id = ?1 AND app_type = ?2",
+            params![id, app_type],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|e| AppError::Database(format!("查询 provider 展示名失败: {e}")))
+    }
+
     pub fn save_provider(&self, app_type: &str, provider: &Provider) -> Result<(), AppError> {
         let mut conn = lock_conn!(self.conn);
         let tx = conn
@@ -279,6 +297,14 @@ impl Database {
 
     pub fn delete_provider(&self, app_type: &str, id: &str) -> Result<(), AppError> {
         let conn = lock_conn!(self.conn);
+        // 先把名字快照进归档表：provider 删除后，历史用量 / TPS 分组仍能显示可读名称
+        // （读侧 COALESCE 优先实时 providers.name，其次归档名，最后回退 provider_id）。
+        conn.execute(
+            "INSERT OR REPLACE INTO provider_name_archive (provider_id, app_type, name, deleted_at)
+             SELECT id, app_type, name, ?3 FROM providers WHERE id = ?1 AND app_type = ?2",
+            params![id, app_type, chrono::Utc::now().timestamp()],
+        )
+        .map_err(|e| AppError::Database(format!("归档 provider 展示名失败: {e}")))?;
         conn.execute(
             "DELETE FROM providers WHERE id = ?1 AND app_type = ?2",
             params![id, app_type],

@@ -275,10 +275,18 @@ pub fn on_request_logged(db: &Database, log: &RequestLog) -> Result<(), AppError
         return Ok(());
     }
 
+    // 写入时冗余 provider 展示名，保证 provider 删除后 TPS 分组仍可读；
+    // 查不到（极端时序下已删除）则落 NULL，读侧回退 provider_id。
+    let provider_name = db
+        .get_provider_name(&log.provider_id, &log.app_type)
+        .ok()
+        .flatten();
+
     let input = TpsSampleInput {
         request_id: log.request_id.clone(),
         app_type: log.app_type.clone(),
         provider_id: log.provider_id.clone(),
+        provider_name,
         model: log.model.clone(),
         output_tokens: log.usage.output_tokens as i64,
         first_token_ms: log.first_token_ms.map(|v| v as i64),

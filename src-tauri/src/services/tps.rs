@@ -21,6 +21,8 @@ pub struct TpsSampleInput {
     pub request_id: String,
     pub app_type: String,
     pub provider_id: String,
+    /// 写入时冗余的 provider 展示名（删除 provider 后仍可读）；None = 查不到名
+    pub provider_name: Option<String>,
     pub model: String,
     pub output_tokens: i64,
     pub first_token_ms: Option<i64>,
@@ -177,14 +179,15 @@ impl Database {
         let conn = lock_conn!(self.conn);
         conn.execute(
             "INSERT INTO tps_samples (
-                request_id, app_type, provider_id, model,
+                request_id, app_type, provider_id, provider_name, model,
                 output_tokens, first_token_ms, duration_ms,
                 is_streaming, tps, created_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             rusqlite::params![
                 input.request_id,
                 input.app_type,
                 input.provider_id,
+                input.provider_name,
                 input.model,
                 input.output_tokens,
                 input.first_token_ms,
@@ -409,8 +412,10 @@ impl Database {
         let (conds, params) = build_conditions(filters, &[], "t.");
         let where_clause = where_from(&conds);
         // 聚合：count / avg / max / total
+        // 展示名优先级：写入时冗余的 provider_name（provider 删除后仍可读）
+        // → 实时 JOIN 的 providers.name（改名即时生效）→ 兜底 provider_id。
         let agg_sql = format!(
-            "SELECT t.app_type, t.provider_id, COALESCE(p.name, t.provider_id),
+            "SELECT t.app_type, t.provider_id, COALESCE(t.provider_name, p.name, t.provider_id),
                     COUNT(*),
                     COALESCE(AVG(CASE WHEN t.tps > 0 THEN t.tps END), 0),
                     COALESCE(MAX(t.tps), 0),

@@ -55,7 +55,7 @@ export type TpsGroupBy = "provider" | "model";
 export interface TpsGroupStats {
   /** 分组键：Provider 时为 provider_id，Model 时为 model 名 */
   key: string;
-  /** 展示名：Provider 时取 providers.name（缺失则回退 provider_id），Model 时为 null */
+  /** 展示名：Provider 时优先取写入时冗余的 provider_name，其次实时 providers.name（缺失则回退 provider_id），Model 时为 null */
   displayName: string | null;
   /** 仅 Provider 分组有值：该 provider 所属 app_type */
   appType: string | null;

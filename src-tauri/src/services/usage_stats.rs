@@ -207,9 +207,15 @@ fn row_to_request_log_detail(row: &rusqlite::Row<'_>) -> rusqlite::Result<Reques
 /// Session logs use placeholder provider_ids (e.g., `_session`, `_<app>_session`)
 /// that don't exist in the providers table — the CASE expression below is the
 /// authoritative mapping from placeholder to readable name.
+///
+/// 名字解析优先级：实时 providers.name → 删除时归档的 provider_name_archive 名
+/// （provider 被删除后历史行仍可读）→ 会话占位符可读名 → 原始 provider_id。
 fn provider_name_coalesce(log_alias: &str, provider_alias: &str) -> String {
     format!(
-        "COALESCE({provider_alias}.name, CASE {log_alias}.provider_id \
+        "COALESCE({provider_alias}.name, \
+         (SELECT a.name FROM provider_name_archive a \
+          WHERE a.provider_id = {log_alias}.provider_id AND a.app_type = {log_alias}.app_type), \
+         CASE {log_alias}.provider_id \
          WHEN '_session' THEN 'Claude (Session)' \
          WHEN '_codex_session' THEN 'Codex (Session)' \
          WHEN '_gemini_session' THEN 'Gemini (Session)' \
@@ -4344,6 +4350,62 @@ mod tests {
         // 测试不存在的模型
         let result = find_model_pricing_row(&conn, "unknown-model-123")?;
         assert!(result.is_none(), "不应该匹配不存在的模型");
+
+        Ok(())
+    }
+
+    #[test]
+    fn deleted_provider_name_is_archived_and_still_readable_in_stats() -> Result<(), AppError> {
+        let db = Database::memory()?;
+
+        // 建 provider 并写入引用它的用量日志
+        {
+            let conn = lock_conn!(db.conn);
+            conn.execute(
+                "INSERT INTO providers (id, app_type, name, settings_config, is_current)
+                 VALUES ('p-gone', 'claude', 'Gone Provider', '{}', 0)",
+                [],
+            )?;
+            insert_usage_log(
+                &conn,
+                "req-gone",
+                "claude",
+                "p-gone",
+                "claude-3",
+                "proxy",
+                1000,
+                100,
+                50,
+                0,
+                0,
+                200,
+                "0.01",
+            )?;
+        }
+
+        // 删除 provider：名字应快照进归档表
+        db.delete_provider("claude", "p-gone")?;
+        {
+            let conn = lock_conn!(db.conn);
+            let archived: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM provider_name_archive WHERE provider_id = 'p-gone'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(archived, 1);
+        }
+
+        // 用量读路径不再回退成 provider_id，而是展示归档名
+        let stats = db.get_provider_stats(None, None, None, None, None)?;
+        let p = stats
+            .iter()
+            .find(|s| s.provider_id == "p-gone")
+            .expect("应有 p-gone 统计行");
+        assert_eq!(p.provider_name, "Gone Provider");
+
+        let logs = db.get_request_logs(&LogFilters::default(), 0, 10)?;
+        assert_eq!(logs.data.len(), 1);
+        assert_eq!(logs.data[0].provider_name.as_deref(), Some("Gone Provider"));
 
         Ok(())
     }

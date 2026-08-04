@@ -195,6 +195,12 @@ impl Database {
                 .map_err(|e| AppError::Database(e.to_string()))?;
         }
 
+        // 导入/同步会整体替换主库：导入数据里可能含有「早已删除、无归档名」的 provider_id。
+        // 立即自愈归档，避免这些行在下次重启前一直显示成裸 UUID。失败不阻断导入。
+        if let Err(e) = self.reconcile_provider_name_archive() {
+            log::warn!("导入后自愈 provider 名字归档失败（不影响导入）: {e}");
+        }
+
         let backup_id = backup_path
             .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
             .unwrap_or_default();
@@ -649,6 +655,12 @@ impl Database {
         self.create_tables()?;
         self.apply_schema_migrations()?;
         self.ensure_model_pricing_seeded()?;
+
+        // 恢复的是整库快照：其中可能含有「早已删除、无归档名」的 provider_id（旧备份）。
+        // 自愈归档，保证历史用量 / TPS 不显示裸 UUID。失败不阻断恢复。
+        if let Err(e) = self.reconcile_provider_name_archive() {
+            log::warn!("恢复备份后自愈 provider 名字归档失败（不影响恢复）: {e}");
+        }
 
         log::info!("Database restored from backup: {filename}, safety backup: {safety_id}");
         Ok(safety_id)

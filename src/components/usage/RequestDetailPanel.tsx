@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRequestDetail } from "@/lib/query/usage";
+import { ProviderName } from "./ProviderName";
 import { getFreshInputTokens, isUnpricedUsage } from "@/types/usage";
 
 interface RequestDetailPanelProps {
@@ -94,9 +95,11 @@ export function RequestDetailPanel({
                   {t("usage.provider", "供应商")}
                 </dt>
                 <dd className="text-sm">
-                  <span className="font-medium">
-                    {request.providerName || t("usage.unknownProvider", "未知")}
-                  </span>
+                  <ProviderName
+                    name={request.providerName || t("usage.unknownProvider", "未知")}
+                    isDeleted={request.providerIsDeleted}
+                    className="font-medium"
+                  />
                   <span className="ml-2 text-xs text-muted-foreground">
                     {request.providerId}
                   </span>

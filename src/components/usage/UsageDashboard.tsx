@@ -4,6 +4,7 @@ import { UsageHero } from "./UsageHero";
 import { UsageTrendChart } from "./UsageTrendChart";
 import { RequestLogTable } from "./RequestLogTable";
 import { ProviderStatsTable } from "./ProviderStatsTable";
+import { ProviderName } from "./ProviderName";
 import { ModelStatsTable } from "./ModelStatsTable";
 import {
   KNOWN_APP_TYPES,
@@ -216,14 +217,18 @@ export function UsageDashboard({
   );
 
   const providerOptions = useMemo(() => {
-    const names = new Set<string>();
+    // 按展示名去重，保留「是否已删除」以便下拉项做删除视觉。
+    const byName = new Map<string, boolean>();
     for (const stat of providerOptionsData ?? []) {
-      names.add(stat.providerName);
+      byName.set(
+        stat.providerName,
+        (byName.get(stat.providerName) ?? false) || Boolean(stat.providerIsDeleted),
+      );
     }
     // 数据刷新后选中项可能掉出列表（如改了时间范围）；补回去保证 Select
     // 仍能渲染选中文案，用户看得见才能主动清除。
-    if (providerName) names.add(providerName);
-    return Array.from(names);
+    if (providerName && !byName.has(providerName)) byName.set(providerName, false);
+    return Array.from(byName, ([name, isDeleted]) => ({ name, isDeleted }));
   }, [providerOptionsData, providerName]);
 
   const modelOptions = useMemo(() => {
@@ -296,14 +301,14 @@ export function UsageDashboard({
             </SelectTrigger>
             <SelectContent className="max-w-[280px]">
               <SelectItem value="all">{t("usage.allSources")}</SelectItem>
-              {providerOptions.map((name) => (
+              {providerOptions.map(({ name, isDeleted }) => (
                 <SelectItem
                   key={name}
                   value={encodeOptionValue(name)}
                   title={name}
                   className="[&>span]:min-w-0 [&>span]:truncate"
                 >
-                  {name}
+                  <ProviderName name={name} isDeleted={isDeleted} />
                 </SelectItem>
               ))}
             </SelectContent>

@@ -26,6 +26,7 @@ import {
   useResetConcurrencyPeak,
 } from "@/lib/query/tps";
 import { useTpsEventBridge } from "@/hooks/useTpsEventBridge";
+import { ProviderName } from "@/components/usage/ProviderName";
 import type { TpsGroupStats, TpsSample, TpsTrendPoint } from "@/lib/api/tps";
 import { cn } from "@/lib/utils";
 
@@ -727,7 +728,11 @@ function BreakdownCard({
                       className="font-mono text-xs max-w-[180px] truncate"
                       title={r.key}
                     >
-                      {r.displayName ?? r.key}
+                      <ProviderName
+                        name={r.displayName ?? r.key}
+                        isDeleted={r.isDeleted}
+                        title={r.key}
+                      />
                     </TableCell>
                     {showApp && (
                       <TableCell className="text-xs">

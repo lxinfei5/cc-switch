@@ -94,6 +94,10 @@ pub struct TpsGroupStats {
     pub display_name: Option<String>,
     /// 仅 Provider 分组有值：该 provider 所属 app_type
     pub app_type: Option<String>,
+    /// 仅 Provider 分组有值：该 provider 是否已删除（前端据此做删除视觉）。
+    /// Model 分组恒为 None。
+    #[serde(default)]
+    pub is_deleted: Option<bool>,
     pub sample_count: u64,
     pub avg_tps: f64,
     pub max_tps: f64,
@@ -412,10 +416,18 @@ impl Database {
         let (conds, params) = build_conditions(filters, &[], "t.");
         let where_clause = where_from(&conds);
         // 聚合：count / avg / max / total
-        // 展示名优先级：写入时冗余的 provider_name（provider 删除后仍可读）
-        // → 实时 JOIN 的 providers.name（改名即时生效）→ 兜底 provider_id。
+        // 展示名优先级：实时 JOIN 的 providers.name（改名即时生效）→ 写入时冗余的
+        // provider_name → 删除时归档的 provider_name_archive 名 → 兜底 provider_id。
+        // is_deleted：既无实时 provider 也无归档名（且非会话占位）即为已删除。
         let agg_sql = format!(
-            "SELECT t.app_type, t.provider_id, COALESCE(t.provider_name, p.name, t.provider_id),
+            "SELECT t.app_type, t.provider_id,
+                    COALESCE(p.name, t.provider_name,
+                             (SELECT a.name FROM provider_name_archive a
+                              WHERE a.provider_id = t.provider_id AND a.app_type = t.app_type),
+                             t.provider_id),
+                    CASE WHEN p.id IS NOT NULL THEN 0
+                         WHEN t.provider_id IN ('_session','_codex_session','_gemini_session','_opencode_session','_grok_session') THEN 0
+                         ELSE 1 END,
                     COUNT(*),
                     COALESCE(AVG(CASE WHEN t.tps > 0 THEN t.tps END), 0),
                     COALESCE(MAX(t.tps), 0),
@@ -441,14 +453,16 @@ impl Database {
             let app_type: String = r.get(0)?;
             let provider_id: String = r.get(1)?;
             let name: Option<String> = r.get(2)?;
-            let count: i64 = r.get(3)?;
-            let avg: f64 = r.get::<_, Option<f64>>(4)?.unwrap_or(0.0);
-            let max: f64 = r.get::<_, Option<f64>>(5)?.unwrap_or(0.0);
-            let total: i64 = r.get(6)?;
+            let is_deleted: bool = r.get::<_, i64>(3)? != 0;
+            let count: i64 = r.get(4)?;
+            let avg: f64 = r.get::<_, Option<f64>>(5)?.unwrap_or(0.0);
+            let max: f64 = r.get::<_, Option<f64>>(6)?.unwrap_or(0.0);
+            let total: i64 = r.get(7)?;
             agg.push(TpsGroupStats {
                 key: provider_id.clone(),
                 display_name: name,
                 app_type: Some(app_type.clone()),
+                is_deleted: Some(is_deleted),
                 sample_count: count as u64,
                 avg_tps: avg,
                 max_tps: max,
@@ -535,6 +549,7 @@ impl Database {
                 key: model.clone(),
                 display_name: None,
                 app_type: None,
+                is_deleted: None,
                 sample_count: count as u64,
                 avg_tps: avg,
                 max_tps: max,
@@ -570,5 +585,69 @@ impl Database {
             }
         }
         Ok(agg)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample(request_id: &str, provider_id: &str, provider_name: Option<&str>) -> TpsSampleInput {
+        TpsSampleInput {
+            request_id: request_id.to_string(),
+            app_type: "claude".to_string(),
+            provider_id: provider_id.to_string(),
+            provider_name: provider_name.map(|s| s.to_string()),
+            model: "claude-3".to_string(),
+            output_tokens: 100,
+            first_token_ms: Some(50),
+            duration_ms: Some(1000),
+            is_streaming: true,
+            tps: 42.0,
+            created_at: 1000,
+        }
+    }
+
+    /// 机制性修复核心（TPS 侧）：v18 之前落库的样本 `provider_name` 为 NULL，
+    /// provider 又被删除后，分组曾经只能回退成裸 UUID。现在应经 provider_name_archive
+    /// 归档名解析，并把该行标记为已删除。
+    #[test]
+    fn breakdown_resolves_deleted_provider_via_archive_and_flags_it() -> Result<(), AppError> {
+        let db = Database::memory()?;
+
+        // 历史样本：provider_name 为 NULL（模拟 v18 之前写入），provider 随后被删除。
+        db.insert_tps_sample(&sample("r-orphan", "prov-old", None))?;
+        // 仍存在的 provider：写入时冗余了名字。
+        {
+            let conn = lock_conn!(db.conn);
+            conn.execute(
+                "INSERT INTO providers (id, app_type, name, settings_config, is_current)
+                 VALUES ('prov-live', 'claude', 'Live Provider', '{}', 0)",
+                [],
+            )?;
+        }
+        db.insert_tps_sample(&sample("r-live", "prov-live", Some("Live Provider")))?;
+
+        // 删除前快照归档名（delete_provider 的机制）；prov-old 走同一条归档路径。
+        {
+            let conn = lock_conn!(db.conn);
+            conn.execute(
+                "INSERT INTO provider_name_archive (provider_id, app_type, name, deleted_at)
+                 VALUES ('prov-old', 'claude', '已删除供应商·PROV-OLD', 1)",
+                [],
+            )?;
+        }
+
+        let rows = db.get_tps_breakdown(&TpsFilters::default(), TpsGroupBy::Provider)?;
+
+        let orphan = rows.iter().find(|r| r.key == "prov-old").expect("应有孤儿行");
+        assert_eq!(orphan.display_name.as_deref(), Some("已删除供应商·PROV-OLD"));
+        assert_eq!(orphan.is_deleted, Some(true), "孤儿应标记为已删除");
+
+        let live = rows.iter().find(|r| r.key == "prov-live").expect("应有 live 行");
+        assert_eq!(live.display_name.as_deref(), Some("Live Provider"));
+        assert_eq!(live.is_deleted, Some(false), "仍在用的 provider 不应标记为已删除");
+
+        Ok(())
     }
 }

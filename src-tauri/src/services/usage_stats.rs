@@ -80,6 +80,10 @@ pub struct DailyStats {
 pub struct ProviderStats {
     pub provider_id: String,
     pub provider_name: String,
+    /// 该 provider 是否已删除（既不在实时 providers 表、也无归档记录，且非会话占位）。
+    /// 前端据此对已删除 provider 的历史行做删除视觉（删除线/灰化/徽标）。
+    #[serde(default)]
+    pub provider_is_deleted: bool,
     pub request_count: u64,
     pub total_tokens: u64,
     pub total_cost: String,
@@ -128,6 +132,9 @@ pub struct RequestLogDetail {
     pub provider_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider_name: Option<String>,
+    /// 该 provider 是否已删除（前端据此对历史行做删除视觉）。
+    #[serde(default)]
+    pub provider_is_deleted: bool,
     pub app_type: String,
     pub model: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -159,22 +166,24 @@ pub struct RequestLogDetail {
     pub pricing_model: Option<String>,
 }
 
-/// 把 26 列的查询结果映射为 `RequestLogDetail`。
+/// 把 27 列的查询结果映射为 `RequestLogDetail`。
 ///
-/// 调用方的 SELECT **必须**按以下顺序返回 26 列：
+/// 调用方的 SELECT **必须**按以下顺序返回 27 列：
 /// `request_id, provider_id, provider_name, app_type, model, request_model,
 ///  cost_multiplier, input_tokens, output_tokens, cache_read_tokens,
 ///  cache_creation_tokens, input_cost_usd, output_cost_usd, cache_read_cost_usd,
 ///  cache_creation_cost_usd, total_cost_usd, is_streaming, latency_ms,
 ///  first_token_ms, duration_ms, status_code, error_message, created_at,
-///  data_source, pricing_model, input_token_semantics`
+///  data_source, pricing_model, input_token_semantics, provider_is_deleted`
 ///
-/// 不需要 provider_name 时（如 backfill）SELECT `NULL AS provider_name` 占位即可。
+/// 不需要 provider_name 时（如 backfill）SELECT `NULL AS provider_name` 占位即可；
+/// 同理不需要 is_deleted 时 SELECT `0 AS provider_is_deleted` 占位。
 fn row_to_request_log_detail(row: &rusqlite::Row<'_>) -> rusqlite::Result<RequestLogDetail> {
     Ok(RequestLogDetail {
         request_id: row.get(0)?,
         provider_id: row.get(1)?,
         provider_name: row.get(2)?,
+        provider_is_deleted: row.get::<_, i64>(26)? != 0,
         app_type: row.get(3)?,
         model: row.get(4)?,
         request_model: row.get(5)?,
@@ -222,6 +231,22 @@ fn provider_name_coalesce(log_alias: &str, provider_alias: &str) -> String {
          WHEN '_opencode_session' THEN 'OpenCode (Session)' \
          WHEN '_grok_session' THEN 'Grok Build (Session)' \
          ELSE {log_alias}.provider_id END)"
+    )
+}
+
+/// SQL 标量表达式：该行的 provider 是否「已删除」（1/0）。
+///
+/// 判定口径：不在实时 providers 表、且不是会话占位符（`_session` 等），即视为已删除。
+/// 这里**无需**再查 provider_name_archive：所有真实删除的 provider 都会有归档行
+/// （delete_provider 删除时快照 + 启动时 reconcile 自愈回填），而归档行对应的
+/// provider 本就必然不在 providers 表里，所以「不在 providers」已等价于「已删除」。
+/// 已删除 provider 的名字由 [`provider_name_coalesce`] 经归档表解析，本表达式只负责
+/// 给出「已删除」事实，供前端做删除视觉（删除线/灰化/徽标）。
+fn provider_is_deleted_sql(log_alias: &str, provider_alias: &str) -> String {
+    format!(
+        "CASE WHEN {provider_alias}.id IS NOT NULL THEN 0 \
+         WHEN {log_alias}.provider_id IN ('_session', '_codex_session', '_gemini_session', '_opencode_session', '_grok_session') THEN 0 \
+         ELSE 1 END"
     )
 }
 
@@ -359,6 +384,60 @@ pub(crate) struct DedupKey<'a> {
     pub cache_creation_tokens: u32,
     pub created_at: i64,
 }
+
+impl Database {
+    /// 启动时的「删除供应商名字归档」自愈（机制性修复的核心）。
+    ///
+    /// 背景：v18 之前删除的 provider，`provider_name_archive` 里没有快照，历史用量 /
+    /// TPS 分组在展示层只能回退成原始 provider_id（UUID 前缀）。删除是不可逆的，名字
+    /// 本身已不可恢复，但**永远不该把裸 UUID 当成名字展示**。
+    ///
+    /// 做法：扫三张引用 provider 的事实表（`proxy_request_logs`、`usage_daily_rollups`、
+    /// `tps_samples`），找出「既不在实时 providers、也没有归档名、也不是会话占位符」的
+    /// 孤儿 provider_id，为其写入一条**确定性**归档名 `已删除供应商·<id前8位>`。
+    /// `INSERT OR IGNORE` 幂等；名字由 id 派生、跨表/跨次运行一致，于是统计与 TPS 对
+    /// 同一已删除 provider 会显示同一个可读标签，并带有稳定的短码便于区分不同孤儿。
+    ///
+    /// 返回新归档的 provider 个数（已归档过则返回 0）。
+    ///
+    /// 已知边界（不完美的「已删除」判定）：存储层只有 provider_id，无法区分「真删除」
+    /// 与「改 id（rename key）」——后者是 save(new)+delete(old)，旧 id 的历史行会被判为
+    /// 已删除并打上徽标。要彻底解决需把改名落成一等事件（迁移历史行的 provider_id 或
+    /// 记录 id 别名表），属于更大的改动，本次不做。真删除这一主路径始终正确。
+    pub fn reconcile_provider_name_archive(&self) -> Result<u64, AppError> {
+        let conn = lock_conn!(self.conn);
+        // 孤儿判定 + 确定性命名都在 SQL 里完成，三表 UNION 去重后一次性 INSERT OR IGNORE。
+        // 会话占位符（_session 等）有专用可读名，不算孤儿，排除在外。
+        let sql = "INSERT OR IGNORE INTO provider_name_archive (provider_id, app_type, name, deleted_at)
+             SELECT provider_id, app_type,
+                    '已删除供应商·' || UPPER(SUBSTR(provider_id, 1, 8)),
+                    ?1
+             FROM (
+                 SELECT provider_id, app_type FROM proxy_request_logs
+                 UNION
+                 SELECT provider_id, app_type FROM usage_daily_rollups
+                 UNION
+                 SELECT provider_id, app_type FROM tps_samples
+             ) orphan
+             WHERE provider_id NOT IN ('_session', '_codex_session', '_gemini_session', '_opencode_session', '_grok_session')
+               AND NOT EXISTS (
+                     SELECT 1 FROM providers p
+                     WHERE p.id = orphan.provider_id AND p.app_type = orphan.app_type
+                 )
+               AND NOT EXISTS (
+                     SELECT 1 FROM provider_name_archive a
+                     WHERE a.provider_id = orphan.provider_id AND a.app_type = orphan.app_type
+                 )";
+        let n = conn
+            .execute(sql, params![chrono::Utc::now().timestamp()])
+            .map_err(|e| AppError::Database(format!("自愈 provider 名字归档失败: {e}")))?;
+        if n > 0 {
+            log::info!("已为 {n} 个此前删除的 provider 回填可读归档名（自愈）");
+        }
+        Ok(n as u64)
+    }
+}
+
 
 /// session 日志写入前的统一去重判定。
 ///
@@ -1326,11 +1405,13 @@ impl Database {
         // UNION detail logs + rollup data, then aggregate
         let detail_pname = provider_name_coalesce("l", "p");
         let rollup_pname = provider_name_coalesce("r", "p2");
+        let detail_pdel = provider_is_deleted_sql("l", "p");
+        let rollup_pdel = provider_is_deleted_sql("r", "p2");
         let fresh_input_detail = fresh_input_sql("l");
         let fresh_input_rollup = fresh_input_sql("r");
         let sql = format!(
             "SELECT
-                provider_id, app_type, provider_name,
+                provider_id, app_type, provider_name, is_deleted,
                 SUM(request_count) as request_count,
                 SUM(total_tokens) as total_tokens,
                 SUM(total_cost) as total_cost,
@@ -1341,6 +1422,7 @@ impl Database {
             FROM (
                 SELECT l.provider_id, l.app_type,
                     {detail_pname} as provider_name,
+                    {detail_pdel} as is_deleted,
                     COUNT(*) as request_count,
                     COALESCE(SUM({fresh_input_detail} + l.output_tokens), 0) as total_tokens,
                     COALESCE(SUM(CAST(l.total_cost_usd AS REAL)), 0) as total_cost,
@@ -1353,6 +1435,7 @@ impl Database {
                 UNION ALL
                 SELECT r.provider_id, r.app_type,
                     {rollup_pname} as provider_name,
+                    {rollup_pdel} as is_deleted,
                     COALESCE(SUM(r.request_count), 0),
                     COALESCE(SUM({fresh_input_rollup} + r.output_tokens), 0),
                     COALESCE(SUM(CAST(r.total_cost_usd AS REAL)), 0),
@@ -1372,8 +1455,8 @@ impl Database {
         params.extend(rollup_params);
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
         let row_mapper = |row: &rusqlite::Row| {
-            let request_count: i64 = row.get(3)?;
-            let success_count: i64 = row.get(6)?;
+            let request_count: i64 = row.get(4)?;
+            let success_count: i64 = row.get(7)?;
             let success_rate = if request_count > 0 {
                 (success_count as f32 / request_count as f32) * 100.0
             } else {
@@ -1383,11 +1466,12 @@ impl Database {
             Ok(ProviderStats {
                 provider_id: row.get(0)?,
                 provider_name: row.get(2)?,
+                provider_is_deleted: row.get::<_, i64>(3)? != 0,
                 request_count: request_count as u64,
-                total_tokens: row.get::<_, i64>(4)? as u64,
-                total_cost: format!("{:.6}", row.get::<_, f64>(5)?),
+                total_tokens: row.get::<_, i64>(5)? as u64,
+                total_cost: format!("{:.6}", row.get::<_, f64>(6)?),
                 success_rate,
-                avg_latency_ms: row.get::<_, f64>(7)? as u64,
+                avg_latency_ms: row.get::<_, f64>(8)? as u64,
             })
         };
 
@@ -1612,6 +1696,7 @@ impl Database {
         params.push(Box::new(offset as i64));
 
         let logs_pname = provider_name_coalesce("l", "p");
+        let logs_pdel = provider_is_deleted_sql("l", "p");
         let sql = format!(
             "SELECT l.request_id, l.provider_id, {logs_pname} as provider_name, l.app_type, l.model,
                     l.request_model, l.cost_multiplier,
@@ -1619,7 +1704,7 @@ impl Database {
                     l.input_cost_usd, l.output_cost_usd, l.cache_read_cost_usd, l.cache_creation_cost_usd, l.total_cost_usd,
                     l.is_streaming, l.latency_ms, l.first_token_ms, l.duration_ms,
                     l.status_code, l.error_message, l.created_at, l.data_source, l.pricing_model,
-                    l.input_token_semantics
+                    l.input_token_semantics, {logs_pdel} as provider_is_deleted
              FROM proxy_request_logs l
              LEFT JOIN providers p ON l.provider_id = p.id AND l.app_type = p.app_type
              {where_clause}
@@ -1656,6 +1741,7 @@ impl Database {
         let conn = lock_conn!(self.conn);
 
         let detail_pname = provider_name_coalesce("l", "p");
+        let detail_pdel = provider_is_deleted_sql("l", "p");
         let detail_sql = format!(
             "SELECT l.request_id, l.provider_id, {detail_pname} as provider_name, l.app_type, l.model,
                     l.request_model, l.cost_multiplier,
@@ -1663,7 +1749,7 @@ impl Database {
                     input_cost_usd, output_cost_usd, cache_read_cost_usd, cache_creation_cost_usd, total_cost_usd,
                     is_streaming, latency_ms, first_token_ms, duration_ms,
                     status_code, error_message, created_at, l.data_source, l.pricing_model,
-                    l.input_token_semantics
+                    l.input_token_semantics, {detail_pdel} as provider_is_deleted
              FROM proxy_request_logs l
              LEFT JOIN providers p ON l.provider_id = p.id AND l.app_type = p.app_type
              WHERE l.request_id = ?"
@@ -1819,7 +1905,7 @@ impl Database {
                         input_cost_usd, output_cost_usd, cache_read_cost_usd,
                         cache_creation_cost_usd, total_cost_usd, is_streaming, latency_ms,
                         first_token_ms, duration_ms, status_code, error_message, created_at,
-                        data_source, pricing_model, input_token_semantics
+                        data_source, pricing_model, input_token_semantics, 0 AS provider_is_deleted
              FROM proxy_request_logs
              WHERE CAST(total_cost_usd AS REAL) <= 0
                AND (input_tokens > 0 OR output_tokens > 0
@@ -4406,6 +4492,120 @@ mod tests {
         let logs = db.get_request_logs(&LogFilters::default(), 0, 10)?;
         assert_eq!(logs.data.len(), 1);
         assert_eq!(logs.data[0].provider_name.as_deref(), Some("Gone Provider"));
+
+        Ok(())
+    }
+
+    /// 机制性修复核心：v18 之前删除的 provider 无归档快照，历史上只能显示裸 UUID。
+    /// `reconcile_provider_name_archive` 应在读统计前为其回填确定性的可读归档名，
+    /// 并把它标记为已删除（前端据此做删除视觉）。
+    #[test]
+    fn reconcile_backfills_pre_fix_deleted_provider_with_deterministic_name(
+    ) -> Result<(), AppError> {
+        let db = Database::memory()?;
+
+        // 直接写入一条引用「已删除 provider」的日志，但**不**走 delete_provider
+        // （模拟 v18 之前删除、无归档快照的孤儿数据）。
+        {
+            let conn = lock_conn!(db.conn);
+            insert_usage_log(
+                &conn,
+                "req-orphan",
+                "claude",
+                "34e98ff1-aaaa-bbbb-cccc-dddddddddddd",
+                "claude-3",
+                "proxy",
+                1000,
+                100,
+                50,
+                0,
+                0,
+                200,
+                "0.01",
+            )?;
+            // 的确没有任何归档 / 实时 provider
+            let archived: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM provider_name_archive WHERE provider_id LIKE '34e98ff1%'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(archived, 0);
+        }
+
+        // 自愈前：名字会回退成裸 UUID
+        let before = db.get_provider_stats(None, None, None, None, None)?;
+        let p = before
+            .iter()
+            .find(|s| s.provider_id.starts_with("34e98ff1"))
+            .expect("应有孤儿统计行");
+        assert!(p.provider_name.starts_with("34e98ff1"));
+        assert!(p.provider_is_deleted, "孤儿应被标记为已删除");
+
+        // 触发自愈（启动路径调用）：应回填确定性归档名
+        let n = db.reconcile_provider_name_archive()?;
+        assert_eq!(n, 1, "应回填 1 个孤儿 provider");
+
+        // 自愈后：名字变为确定性可读名（含短码），且幂等
+        let after = db.get_provider_stats(None, None, None, None, None)?;
+        let p = after
+            .iter()
+            .find(|s| s.provider_id.starts_with("34e98ff1"))
+            .expect("应有孤儿统计行");
+        assert_eq!(p.provider_name, "已删除供应商·34E98FF1");
+        assert!(p.provider_is_deleted);
+        assert_eq!(
+            db.reconcile_provider_name_archive()?,
+            0,
+            "自愈应幂等，不再重复回填"
+        );
+
+        Ok(())
+    }
+
+    /// 已删除标记不应误伤：仍存在的 provider 与会话占位行都不算「已删除」。
+    #[test]
+    fn provider_is_deleted_false_for_live_and_session_providers() -> Result<(), AppError> {
+        let db = Database::memory()?;
+        {
+            let conn = lock_conn!(db.conn);
+            conn.execute(
+                "INSERT INTO providers (id, app_type, name, settings_config, is_current)
+                 VALUES ('p-live', 'claude', 'Live Provider', '{}', 0)",
+                [],
+            )?;
+            insert_usage_log(
+                &conn, "req-live", "claude", "p-live", "claude-3", "proxy", 1000, 100, 50, 0, 0,
+                200, "0.01",
+            )?;
+            // 会话占位行（_session）：有专用可读名，不算已删除
+            insert_usage_log(
+                &conn, "req-sess", "claude", "_session", "claude-3", "session_log", 1000, 100, 50,
+                0, 0, 200, "0.01",
+            )?;
+        }
+
+        let stats = db.get_provider_stats(None, None, None, None, None)?;
+        let live = stats
+            .iter()
+            .find(|s| s.provider_id == "p-live")
+            .expect("应有 live 行");
+        assert!(!live.provider_is_deleted, "仍在用的 provider 不应标记为已删除");
+        assert_eq!(live.provider_name, "Live Provider");
+
+        // 会话占位行在统计里可能被跨源去重折叠，直接在 SQL 层校验其 is_deleted = 0
+        // （占位符有专用可读名，绝不能被当成「已删除 provider」）。
+        let conn = lock_conn!(db.conn);
+        let sess_deleted: i64 = conn.query_row(
+            &format!(
+                "SELECT {} FROM proxy_request_logs l LEFT JOIN providers p \
+                 ON l.provider_id = p.id AND l.app_type = p.app_type \
+                 WHERE l.provider_id = '_session' LIMIT 1",
+                provider_is_deleted_sql("l", "p")
+            ),
+            [],
+            |r| r.get(0),
+        )?;
+        assert_eq!(sess_deleted, 0, "会话占位行不应标记为已删除");
 
         Ok(())
     }

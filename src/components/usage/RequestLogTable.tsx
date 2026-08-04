@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRequestLogs } from "@/lib/query/usage";
+import { ProviderName } from "./ProviderName";
 import {
   getFreshInputTokens,
   isUnpricedUsage,
@@ -209,11 +210,12 @@ export function RequestLogTable({
                             },
                           )}
                         </TableCell>
-                        <TableCell
-                          className="text-center max-w-[140px] truncate"
-                          title={log.providerName || undefined}
-                        >
-                          {log.providerName || t("usage.unknownProvider")}
+                        <TableCell className="text-center max-w-[140px] truncate">
+                          <ProviderName
+                            name={log.providerName || t("usage.unknownProvider")}
+                            isDeleted={log.providerIsDeleted}
+                            title={log.providerId}
+                          />
                         </TableCell>
                         <TableCell className="text-center max-w-[200px]">
                           <div

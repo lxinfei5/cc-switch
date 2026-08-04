@@ -743,6 +743,16 @@ pub fn run() {
                 Err(e) => log::warn!("✗ Failed to seed official providers: {e}"),
             }
 
+            // 自愈：为 v18 之前删除、无归档名的 provider 回填可读归档名，
+            // 保证历史用量 / TPS 分组不再回退成裸 UUID。幂等，失败不阻断启动。
+            match app_state.db.reconcile_provider_name_archive() {
+                Ok(count) if count > 0 => {
+                    log::info!("✓ Reconciled {count} deleted-provider name(s)");
+                }
+                Ok(_) => {}
+                Err(e) => log::warn!("✗ Failed to reconcile provider name archive: {e}"),
+            }
+
             {
                 let db_for_codex_history_migration = app_state.db.clone();
                 tauri::async_runtime::spawn_blocking(move || {

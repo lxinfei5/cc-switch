@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { useProviderStats } from "@/lib/query/usage";
 import { fmtUsd } from "./format";
+import { ProviderName } from "./ProviderName";
 import type { UsageRangeSelection } from "@/types/usage";
 
 interface ProviderStatsTableProps {
@@ -74,9 +75,13 @@ export function ProviderStatsTable({
             </TableRow>
           ) : (
             stats?.map((stat) => (
-              <TableRow key={stat.providerId}>
-                <TableCell className="font-medium" title={stat.providerName}>
-                  {stat.providerName}
+              <TableRow key={`${stat.providerId}:${stat.providerName}`}>
+                <TableCell className="font-medium">
+                  <ProviderName
+                    name={stat.providerName}
+                    isDeleted={stat.providerIsDeleted}
+                    title={stat.providerId}
+                  />
                 </TableCell>
                 <TableCell className="text-right tnum">
                   {stat.requestCount.toLocaleString()}

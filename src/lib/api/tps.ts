@@ -59,6 +59,8 @@ export interface TpsGroupStats {
   displayName: string | null;
   /** 仅 Provider 分组有值：该 provider 所属 app_type */
   appType: string | null;
+  /** 仅 Provider 分组有值：该 provider 是否已删除（前端据此做删除视觉）。Model 分组为 null */
+  isDeleted?: boolean | null;
   sampleCount: number;
   avgTps: number;
   maxTps: number;

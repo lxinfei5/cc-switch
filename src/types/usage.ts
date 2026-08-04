@@ -11,6 +11,8 @@ export interface RequestLog {
   requestId: string;
   providerId: string;
   providerName?: string;
+  /** 该 provider 是否已删除（前端据此对历史行做删除视觉）。 */
+  providerIsDeleted?: boolean;
   appType: string;
   model: string;
   requestModel?: string;
@@ -114,6 +116,8 @@ export interface DailyStats {
 export interface ProviderStats {
   providerId: string;
   providerName: string;
+  /** 该 provider 是否已删除（后端对无实时/归档记录且非会话占位的 provider 置 true）。 */
+  providerIsDeleted?: boolean;
   requestCount: number;
   totalTokens: number;
   totalCost: string;

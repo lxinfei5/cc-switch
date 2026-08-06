@@ -34,6 +34,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { usageKeys, useModelStats, useProviderStats } from "@/lib/query/usage";
 import { useUsageEventBridge } from "@/hooks/useUsageEventBridge";
+import { aggregateProviderOptions } from "./providerOptions";
 import {
   Accordion,
   AccordionContent,
@@ -97,6 +98,9 @@ export function UsageDashboard({
   const [providerName, setProviderName] = useState<string | undefined>(
     undefined,
   );
+  // 选中项的删除态：选中那一刻从当前选项里捕获，供「选中项掉出当前范围后仍要
+  // 补回下拉」的兜底保留「已删除」徽标（见 providerOptions）。
+  const [providerIsDeleted, setProviderIsDeleted] = useState(false);
   const [model, setModel] = useState<string | undefined>(undefined);
   const [refreshIntervalMs, setRefreshIntervalMs] = useState(() =>
     normalizeRefreshInterval(savedRefreshIntervalMs),
@@ -107,22 +111,6 @@ export function UsageDashboard({
   useEffect(() => {
     setRefreshIntervalMs(normalizeRefreshInterval(savedRefreshIntervalMs));
   }, [savedRefreshIntervalMs]);
-
-  // 切应用时清掉下游筛选，避免留下一个在新范围内查无数据的"幽灵"组合；
-  // 切 Provider 同理清掉模型（模型选项随 Provider 级联）。
-  const changeAppType = (next: AppTypeFilter) => {
-    setAppType(next);
-    if (next !== appType) {
-      setProviderName(undefined);
-      setModel(undefined);
-    }
-  };
-  const changeProviderName = (next: string | undefined) => {
-    setProviderName(next);
-    if (next !== providerName) {
-      setModel(undefined);
-    }
-  };
 
   // 后端写入新日志时 emit `usage-log-recorded`，本 hook 立刻 invalidate 所有
   // usage 查询，实现实时刷新（仅在 Dashboard 挂载时生效，离开页面自动取消监听）
@@ -216,20 +204,38 @@ export function UsageDashboard({
     optionsRefetch,
   );
 
-  const providerOptions = useMemo(() => {
-    // 按展示名去重，保留「是否已删除」以便下拉项做删除视觉。
-    const byName = new Map<string, boolean>();
-    for (const stat of providerOptionsData ?? []) {
-      byName.set(
-        stat.providerName,
-        (byName.get(stat.providerName) ?? false) || Boolean(stat.providerIsDeleted),
-      );
+  const providerOptions = useMemo(
+    () =>
+      aggregateProviderOptions(
+        providerOptionsData,
+        providerName,
+        providerIsDeleted,
+      ),
+    [providerOptionsData, providerName, providerIsDeleted],
+  );
+
+  // 切应用时清掉下游筛选，避免留下一个在新范围内查无数据的"幽灵"组合；
+  // 切 Provider 同理清掉模型（模型选项随 Provider 级联）。
+  const changeAppType = (next: AppTypeFilter) => {
+    setAppType(next);
+    if (next !== appType) {
+      setProviderName(undefined);
+      setProviderIsDeleted(false);
+      setModel(undefined);
     }
-    // 数据刷新后选中项可能掉出列表（如改了时间范围）；补回去保证 Select
-    // 仍能渲染选中文案，用户看得见才能主动清除。
-    if (providerName && !byName.has(providerName)) byName.set(providerName, false);
-    return Array.from(byName, ([name, isDeleted]) => ({ name, isDeleted }));
-  }, [providerOptionsData, providerName]);
+  };
+  const changeProviderName = (next: string | undefined) => {
+    setProviderName(next);
+    // 选中那一刻记录删除态，供选中项掉出范围后的兜底（见 providerOptions）。
+    if (next !== providerName) {
+      setProviderIsDeleted(
+        next != null
+          ? (providerOptions.find((o) => o.name === next)?.isDeleted ?? false)
+          : false,
+      );
+      setModel(undefined);
+    }
+  };
 
   const modelOptions = useMemo(() => {
     const names = new Set<string>();

@@ -26,7 +26,8 @@ import {
   Cpu,
   LayoutDashboard,
   Gauge,
-  ArrowLeftRight,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Provider, VisibleApps } from "@/types";
@@ -48,7 +49,6 @@ import { useUsageCacheBridge } from "@/hooks/useUsageCacheBridge";
 import { useTauriEvent } from "@/hooks/useTauriEvent";
 import { useLastValidValue } from "@/hooks/useLastValidValue";
 import { useScanUnmanagedSkills } from "@/hooks/useSkills";
-import { useAutoCompact } from "@/hooks/useAutoCompact";
 import { extractErrorMessage } from "@/utils/errorUtils";
 import { isTextEditableTarget } from "@/utils/domUtils";
 import { deepClone } from "@/utils/deepClone";
@@ -71,6 +71,7 @@ import { EnvWarningBanner } from "@/components/env/EnvWarningBanner";
 import { ProxyToggle } from "@/components/proxy/ProxyToggle";
 import { ClaudeDesktopRouteToggle } from "@/components/proxy/ClaudeDesktopRouteToggle";
 import { FailoverToggle } from "@/components/proxy/FailoverToggle";
+import { RoutingActivationBrand } from "@/components/proxy/RoutingActivationBrand";
 import UsageScriptModal from "@/components/UsageScriptModal";
 import UnifiedMcpPanel from "@/components/mcp/UnifiedMcpPanel";
 import PromptPanel from "@/components/prompts/PromptPanel";
@@ -79,7 +80,9 @@ import {
   getSkillsPageHeaderActions,
   type SkillsPageSource,
 } from "@/components/skills/SkillsPage";
-import UnifiedSkillsPanel from "@/components/skills/UnifiedSkillsPanel";
+import UnifiedSkillsPanel, {
+  type SkillsCheckUpdatesState,
+} from "@/components/skills/UnifiedSkillsPanel";
 import { DeepLinkImportDialog } from "@/components/DeepLinkImportDialog";
 import { FirstRunNoticeDialog } from "@/components/FirstRunNoticeDialog";
 import { AgentsPanel } from "@/components/agents/AgentsPanel";
@@ -185,6 +188,16 @@ function App() {
   const [settingsDefaultTab, setSettingsDefaultTab] = useState("general");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isWindowMaximized, setIsWindowMaximized] = useState(false);
+  const [mcpManagementBusy, setMcpManagementBusy] = useState(false);
+  const [skillsManagementBusy, setSkillsManagementBusy] = useState(false);
+  const [skillsNavigationBusy, setSkillsNavigationBusy] = useState(false);
+  const [promptManagementBusy, setPromptManagementBusy] = useState(false);
+  const [promptNavigationBusy, setPromptNavigationBusy] = useState(false);
+  const [skillsCheckUpdatesState, setSkillsCheckUpdatesState] =
+    useState<SkillsCheckUpdatesState>({
+      isChecking: false,
+      hasSkills: false,
+    });
 
   useEffect(() => {
     localStorage.setItem(VIEW_STORAGE_KEY, currentView);
@@ -258,8 +271,6 @@ function App() {
   const mcpPanelRef = useRef<any>(null);
   const skillsPageRef = useRef<any>(null);
   const unifiedSkillsPanelRef = useRef<any>(null);
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const isToolbarCompact = useAutoCompact(toolbarRef);
   // 订阅未管理 Skill 的共享缓存（实际扫描由 UnifiedSkillsPanel 进入页面时触发）。
   // 这里 enabled 默认 false，仅用于「导入」按钮的绿点提示，不主动发起扫描。
   const { data: unmanagedSkills } = useScanUnmanagedSkills();
@@ -598,6 +609,10 @@ function App() {
   }, [activeApp]);
 
   const currentViewRef = useRef(currentView);
+  const managementBusy =
+    mcpManagementBusy || skillsNavigationBusy || promptNavigationBusy;
+  const managementBusyRef = useRef(false);
+  managementBusyRef.current = managementBusy;
 
   useEffect(() => {
     currentViewRef.current = currentView;
@@ -606,6 +621,10 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "," && (event.metaKey || event.ctrlKey)) {
+        if (managementBusyRef.current) {
+          event.preventDefault();
+          return;
+        }
         event.preventDefault();
         setCurrentView("settings");
         return;
@@ -617,6 +636,7 @@ function App() {
 
       const view = currentViewRef.current;
       if (view === "providers") return;
+      if (managementBusyRef.current) return;
 
       if (isTextEditableTarget(event.target)) return;
 
@@ -916,6 +936,8 @@ function App() {
               open={true}
               onOpenChange={() => setCurrentView("providers")}
               appId={sharedFeatureApp}
+              onInteractionBlockedChange={setPromptManagementBusy}
+              onNavigationBlockedChange={setPromptNavigationBusy}
             />
           );
         case "hermesMemory":
@@ -927,6 +949,9 @@ function App() {
             <UnifiedSkillsPanel
               ref={unifiedSkillsPanelRef}
               onOpenDiscovery={handleOpenSkillsDiscovery}
+              onInteractionBlockedChange={setSkillsManagementBusy}
+              onNavigationBlockedChange={setSkillsNavigationBusy}
+              onCheckUpdatesStateChange={setSkillsCheckUpdatesState}
               currentApp={
                 sharedFeatureApp === "openclaw" ? "claude" : sharedFeatureApp
               }
@@ -947,6 +972,7 @@ function App() {
             <UnifiedMcpPanel
               ref={mcpPanelRef}
               onOpenChange={() => setCurrentView("providers")}
+              onInteractionBlockedChange={setMcpManagementBusy}
             />
           );
         case "agents":
@@ -1165,6 +1191,7 @@ function App() {
                 <Button
                   variant="outline"
                   size="icon"
+                  disabled={managementBusy}
                   onClick={() =>
                     setCurrentView(
                       currentView === "skillsDiscovery"
@@ -1172,7 +1199,10 @@ function App() {
                         : "providers",
                     )
                   }
-                  className="mr-2 rounded-lg"
+                  className={cn(
+                    "mr-2 rounded-lg",
+                    managementBusy && "disabled:opacity-100",
+                  )}
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
@@ -1203,34 +1233,13 @@ function App() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="relative inline-flex items-center">
-                  <a
-                    href="https://ccswitch.io"
-                    target="_blank"
-                    rel="noreferrer"
-                    className={cn(
-                      "group inline-flex items-center gap-2 rounded-xl px-2.5 py-1",
-                      "glass-card transition-shadow duration-150 hover:shadow-2",
-                      isProxyRunning &&
-                        isCurrentAppTakeoverActive &&
-                        "glass-card-success",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "inline-flex h-6 w-6 items-center justify-center rounded-md text-primary-foreground shadow-1 transition-colors",
-                        isProxyRunning && isCurrentAppTakeoverActive
-                          ? "bg-success"
-                          : "bg-primary",
-                      )}
-                    >
-                      <ArrowLeftRight className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="text-lg font-semibold tracking-tight text-foreground">
-                      CC Switch
-                    </span>
-                  </a>
-                </div>
+                <RoutingActivationBrand
+                  active={isProxyRunning && isCurrentAppTakeoverActive}
+                  contextKey={activeApp}
+                  ready={
+                    proxyStatus !== undefined && takeoverStatus !== undefined
+                  }
+                />
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1300,18 +1309,28 @@ function App() {
                   <ProfileSwitcher activeApp={activeApp} />
                 </div>
               )}
-            <div
-              ref={toolbarRef}
-              className="flex flex-1 min-w-0 overflow-x-hidden items-center py-4 pr-2"
-            >
+            {/* 弹性中段：空间不足时由 AppSwitcher 自行收纳溢出应用；
+                justify-end + overflow-hidden 只裁剪 resize 瞬间的过渡帧 */}
+            <div className="flex flex-1 min-w-0 items-center justify-end overflow-hidden py-4">
+              {currentView === "providers" && (
+                <AppSwitcher
+                  activeApp={activeApp}
+                  onSwitch={setActiveApp}
+                  visibleApps={visibleApps}
+                />
+              )}
+            </div>
+            {/* 固定右端：主操作（添加供应商等）shrink-0，任何配置下不被挤出 */}
+            <div className="flex shrink-0 items-center py-4">
               <div
-                className="flex shrink-0 items-center gap-1.5 ml-auto"
+                className="flex shrink-0 items-center gap-1.5"
                 style={{ WebkitAppRegion: "no-drag" } as any}
               >
                 {currentView === "prompts" && (
                   <Button
                     variant="ghost"
                     size="sm"
+                    disabled={promptManagementBusy}
                     onClick={() => promptPanelRef.current?.openAdd()}
                     className="toolbar-btn"
                   >
@@ -1324,6 +1343,7 @@ function App() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={mcpManagementBusy}
                       onClick={() => mcpPanelRef.current?.openImport()}
                       className="toolbar-btn"
                     >
@@ -1333,6 +1353,7 @@ function App() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={mcpManagementBusy}
                       onClick={() => mcpPanelRef.current?.openAdd()}
                       className="toolbar-btn"
                     >
@@ -1346,6 +1367,32 @@ function App() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={
+                        skillsManagementBusy ||
+                        skillsCheckUpdatesState.isChecking ||
+                        !skillsCheckUpdatesState.hasSkills
+                      }
+                      onClick={() =>
+                        unifiedSkillsPanelRef.current?.checkUpdates()
+                      }
+                      className={cn(
+                        "hover:bg-black/5 dark:hover:bg-white/5",
+                        skillsManagementBusy && "disabled:opacity-100",
+                      )}
+                    >
+                      {skillsCheckUpdatesState.isChecking ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                      )}
+                      {skillsCheckUpdatesState.isChecking
+                        ? t("skills.checkingUpdates")
+                        : t("skills.checkUpdates")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={skillsManagementBusy}
                       onClick={() =>
                         unifiedSkillsPanelRef.current?.openRestoreFromBackup()
                       }
@@ -1357,6 +1404,7 @@ function App() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={skillsManagementBusy}
                       onClick={() =>
                         unifiedSkillsPanelRef.current?.openInstallFromZip()
                       }
@@ -1368,6 +1416,7 @@ function App() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={skillsManagementBusy}
                       onClick={() =>
                         unifiedSkillsPanelRef.current?.openImport()
                       }
@@ -1390,7 +1439,10 @@ function App() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={handleOpenSkillsDiscovery}
+                      disabled={skillsManagementBusy}
+                      onClick={() =>
+                        unifiedSkillsPanelRef.current?.openDiscovery()
+                      }
                       className="toolbar-btn"
                     >
                       <Search className="w-4 h-4 mr-2" />
@@ -1418,13 +1470,6 @@ function App() {
                 )}
                 {currentView === "providers" && (
                   <>
-                    <AppSwitcher
-                      activeApp={activeApp}
-                      onSwitch={setActiveApp}
-                      visibleApps={visibleApps}
-                      compact={isToolbarCompact}
-                    />
-
                     <div className="flex items-center gap-1 p-1 bg-muted rounded-xl">
                       <AnimatePresence mode="wait">
                         <motion.div

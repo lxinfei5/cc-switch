@@ -27,5 +27,9 @@ flatpak-repo/
 .spec-workflow/
 copilot-api
 .history
+
+# Updater signing keys (local build)
+cc-switch-updater.key
+cc-switch-updater.key.pub
 CODEBUDDY.md
 mainWindow.js

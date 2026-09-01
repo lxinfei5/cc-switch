@@ -1706,9 +1706,11 @@ impl Database {
         Ok(())
     }
 
-    /// v18 -> v19: preserve session request identities after detail rollup.
-    /// Upstream introduced this as v16→v17; this fork already used those
-    /// numbers for TPS, so the ledger lands one step later.
+    /// v18 -> v19 迁移：添加会话用量持久去重账本（来自 upstream）
+    ///
+    /// 说明：upstream 原将其作为 v16->v17（SCHEMA v17）。本地已把 v17/v18 用于
+    /// TPS 监控样本表与 provider_name 冗余，为避免与已部署的本地库冲突，这里顺延
+    /// 为 v18->v19。建表语句为 IF NOT EXISTS，幂等，对已是 upstream v17 的库同样安全。
     fn migrate_v18_to_v19(conn: &Connection) -> Result<(), AppError> {
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS session_usage_dedup (

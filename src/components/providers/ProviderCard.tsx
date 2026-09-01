@@ -1,10 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import {
-  AlertTriangle,
-  GripVertical,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { AlertTriangle, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import type {
@@ -364,6 +359,7 @@ export function ProviderCard({
     (!isAnyOmo &&
       !isProxyTakeover &&
       (isActiveProvider || hasPersistentConfigHighlight));
+  const hasStateHighlight = shouldUseGreen || shouldUseBlue;
 
   return (
     <div
@@ -380,6 +376,15 @@ export function ProviderCard({
           "cursor-grabbing border-primary shadow-3 scale-[1.02] z-10",
       )}
     >
+      <div
+        className={cn(
+          "absolute inset-0 bg-gradient-to-r to-transparent transition-opacity duration-500 pointer-events-none",
+          shouldUseGreen && "from-emerald-500/10",
+          shouldUseBlue && "from-blue-500/10",
+          !hasStateHighlight && "from-primary/10",
+          hasStateHighlight ? "opacity-100" : "opacity-0",
+        )}
+      />
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {dragHandleProps && (

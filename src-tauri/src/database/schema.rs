@@ -346,12 +346,20 @@ impl Database {
         .map_err(|e| AppError::Database(e.to_string()))?;
 
         // 18. Session Log Sync 表 (会话日志同步状态)
+        //
+        // last_byte_offset：Claude 路径的字节游标（seek 增量读）；NULL 表示
+        // 尚无字节游标（旧行号游标或非 Claude 路径行），此时回退全量读。
+        // last_tail_fingerprint：游标边界前尾部字节的指纹，用于识别文件被
+        // 外部重写（同尺寸/更大的替换无法靠 size 检测）；NULL 表示无指纹
+        // 可校验，按纯追加处理。
         conn.execute(
             "CREATE TABLE IF NOT EXISTS session_log_sync (
                 file_path TEXT PRIMARY KEY,
                 last_modified INTEGER NOT NULL,
                 last_line_offset INTEGER NOT NULL DEFAULT 0,
-                last_synced_at INTEGER NOT NULL
+                last_synced_at INTEGER NOT NULL,
+                last_byte_offset INTEGER,
+                last_tail_fingerprint INTEGER
             )",
             [],
         )
@@ -586,14 +594,19 @@ impl Database {
                         Self::set_user_version(conn, 17)?;
                     }
                     17 => {
-                        log::info!("迁移数据库从 v17 到 v18（tps_samples 冗余 provider_name）");
+                        log::info!("迁移数据库从 v17 到 v18（补齐 TPS Provider 名称与会话字节游标）");
                         Self::migrate_v17_to_v18(conn)?;
                         Self::set_user_version(conn, 18)?;
                     }
                     18 => {
-                        log::info!("迁移数据库从 v18 到 v19（添加会话用量持久去重账本）");
+                        log::info!("迁移数据库从 v18 到 v19（补齐 TPS Provider 名称与会话用量去重账本）");
                         Self::migrate_v18_to_v19(conn)?;
                         Self::set_user_version(conn, 19)?;
+                    }
+                    19 => {
+                        log::info!("迁移数据库从 v19 到 v20（会话日志字节游标列）");
+                        Self::migrate_v19_to_v20(conn)?;
+                        Self::set_user_version(conn, 20)?;
                     }
                     _ => {
                         return Err(AppError::Database(format!(
@@ -1660,14 +1673,15 @@ impl Database {
         Ok(())
     }
 
-    /// v17 -> v18 迁移：为 tps_samples 冗余 provider_name（本地定制）
+    /// v17 -> v18 迁移：补齐本地 TPS Provider 名称与 upstream 会话字节游标。
     ///
     /// 背景：TPS 按 Provider 分组的展示名来自 LEFT JOIN providers，provider 被删除后
     /// JOIN 落空、回退成原始 provider_id（UUID）。为了在 provider 删除后仍能展示可读
     /// 名称，写入样本时把当时的名字冗余进本列；读侧 `COALESCE(t.provider_name, p.name, ...)`。
     ///
     /// 回填：对仍存在的 provider，把名字从 providers 表补到历史行；已删除 provider 的
-    /// 历史行名字已不可恢复，保持 NULL（读侧回退 provider_id）。
+    /// 历史行名字已不可恢复，保持 NULL（读侧回退 provider_id）。会话游标列保持
+    /// NULL，首轮扫描仍可从旧行号游标转换。
     fn migrate_v17_to_v18(conn: &Connection) -> Result<(), AppError> {
         if !Self::table_exists(conn, "tps_samples")? {
             // 理论上 v16->v17 已建表；防御旧库路径，直接建表保证后续 ALTER 不失败。
@@ -1675,43 +1689,56 @@ impl Database {
         }
         Self::add_column_if_missing(conn, "tps_samples", "provider_name", "TEXT")?;
         // 回填依赖 providers 表；真实库必存在，此处仅防御隔离测试的最小 schema。
-        if !Self::table_exists(conn, "providers")? {
-            return Ok(());
+        if Self::table_exists(conn, "providers")? {
+            conn.execute(
+                "UPDATE tps_samples
+                 SET provider_name = (
+                     SELECT p.name FROM providers p
+                     WHERE p.id = tps_samples.provider_id AND p.app_type = tps_samples.app_type
+                 )
+                 WHERE EXISTS (
+                     SELECT 1 FROM providers p
+                     WHERE p.id = tps_samples.provider_id AND p.app_type = tps_samples.app_type
+                 )",
+                [],
+            )
+            .map_err(|e| AppError::Database(format!("v17 -> v18 回填 tps_samples.provider_name 失败: {e}")))?;
+            // 创建 Provider 名称归档表：删除时快照名字，供 Usage / TPS 读侧兜底展示。
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS provider_name_archive (
+                    provider_id TEXT NOT NULL,
+                    app_type TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    deleted_at INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (provider_id, app_type)
+                )",
+                [],
+            )
+            .map_err(|e| AppError::Database(format!("v17 -> v18 创建 provider_name_archive 表失败: {e}")))?;
         }
-        conn.execute(
-            "UPDATE tps_samples
-             SET provider_name = (
-                 SELECT p.name FROM providers p
-                 WHERE p.id = tps_samples.provider_id AND p.app_type = tps_samples.app_type
-             )
-             WHERE EXISTS (
-                 SELECT 1 FROM providers p
-                 WHERE p.id = tps_samples.provider_id AND p.app_type = tps_samples.app_type
-             )",
-            [],
-        )
-        .map_err(|e| AppError::Database(format!("v17 -> v18 回填 tps_samples.provider_name 失败: {e}")))?;
-        // 创建 Provider 名称归档表：删除时快照名字，供 Usage / TPS 读侧兜底展示。
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS provider_name_archive (
-                provider_id TEXT NOT NULL,
-                app_type TEXT NOT NULL,
-                name TEXT NOT NULL,
-                deleted_at INTEGER NOT NULL DEFAULT 0,
-                PRIMARY KEY (provider_id, app_type)
-            )",
-            [],
-        )
-        .map_err(|e| AppError::Database(format!("v17 -> v18 创建 provider_name_archive 表失败: {e}")))?;
+
+        // upstream 的 v17->v18 迁移与本地 v17->v18 使用了同一个版本号；
+        // 两组列都采用幂等补列，才能同时升级两条已部署的数据库历史。
+        if Self::table_exists(conn, "session_log_sync")? {
+            Self::add_column_if_missing(conn, "session_log_sync", "last_byte_offset", "INTEGER")?;
+            Self::add_column_if_missing(
+                conn,
+                "session_log_sync",
+                "last_tail_fingerprint",
+                "INTEGER",
+            )?;
+        }
         Ok(())
     }
 
     /// v18 -> v19 迁移：添加会话用量持久去重账本（来自 upstream）
     ///
-    /// 说明：upstream 原将其作为 v16->v17（SCHEMA v17）。本地已把 v17/v18 用于
-    /// TPS 监控样本表与 provider_name 冗余，为避免与已部署的本地库冲突，这里顺延
-    /// 为 v18->v19。建表语句为 IF NOT EXISTS，幂等，对已是 upstream v17 的库同样安全。
+    /// 说明：upstream 原将去重账本作为 v16->v17（SCHEMA v17）。本地已把 v17/v18
+    /// 用于 TPS 监控样本表与 provider_name 冗余，这里顺延为 v18->v19；同时重跑
+    /// v17->v18 的幂等补齐，以覆盖已经处于 upstream v18（已有字节游标但尚无
+    /// 本地 TPS 字段）的数据库。
     fn migrate_v18_to_v19(conn: &Connection) -> Result<(), AppError> {
+        Self::migrate_v17_to_v18(conn)?;
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS session_usage_dedup (
                 data_source TEXT NOT NULL,
@@ -1723,7 +1750,24 @@ impl Database {
              CREATE INDEX IF NOT EXISTS idx_session_usage_dedup_semantic
              ON session_usage_dedup(data_source, semantic_id, has_entry_id);",
         )
-        .map_err(|error| AppError::Database(format!("创建会话用量去重账本失败: {error}")))?;
+        .map_err(|error| AppError::Database(format!("创建会话用量去重账本失败: {error}")))
+    }
+
+    /// v19 -> v20: Claude 会话日志的字节游标列与尾部指纹列。
+    ///
+    /// 本地 v19 数据库可能已经完成 TPS/去重迁移但还没有这些列，因此再次使用
+    /// 幂等补列；存量行保持 NULL，首轮扫描按旧行号游标转换为字节位置后继续增量。
+    fn migrate_v19_to_v20(conn: &Connection) -> Result<(), AppError> {
+        // 缺表的库（异常/测试夹具）跳过：create_tables 会以含列的新 DDL 建表。
+        if Self::table_exists(conn, "session_log_sync")? {
+            Self::add_column_if_missing(conn, "session_log_sync", "last_byte_offset", "INTEGER")?;
+            Self::add_column_if_missing(
+                conn,
+                "session_log_sync",
+                "last_tail_fingerprint",
+                "INTEGER",
+            )?;
+        }
         Ok(())
     }
 
@@ -3607,18 +3651,80 @@ mod tests {
     #[test]
     fn migrate_v18_to_v19_creates_session_usage_dedup_ledger() -> Result<(), AppError> {
         let conn = Connection::open_in_memory()?;
+        // 模拟已执行 upstream v17->v18 的数据库：已有会话表，但尚未有本地
+        // TPS 表和 provider_name 列；v18->v19 必须把两条历史都补齐。
+        conn.execute_batch(
+            "CREATE TABLE session_log_sync (
+                file_path TEXT PRIMARY KEY,
+                last_modified INTEGER NOT NULL,
+                last_line_offset INTEGER NOT NULL DEFAULT 0,
+                last_synced_at INTEGER NOT NULL
+             );",
+        )?;
         Database::set_user_version(&conn, 18)?;
 
         Database::apply_schema_migrations_on_conn(&conn)?;
 
         assert_eq!(Database::get_user_version(&conn)?, SCHEMA_VERSION);
         assert!(Database::table_exists(&conn, "session_usage_dedup")?);
+        assert!(Database::table_exists(&conn, "tps_samples")?);
+        assert!(Database::has_column(&conn, "tps_samples", "provider_name")?);
+        assert!(Database::has_column(
+            &conn,
+            "session_log_sync",
+            "last_byte_offset"
+        )?);
+        assert!(Database::has_column(
+            &conn,
+            "session_log_sync",
+            "last_tail_fingerprint"
+        )?);
         conn.execute(
             "INSERT INTO session_usage_dedup
              (data_source, request_id, semantic_id, has_entry_id)
              VALUES ('pi_session', 'request', 'semantic', 1)",
             [],
         )?;
+        Ok(())
+    }
+
+    #[test]
+    fn migrate_v17_to_v18_adds_byte_cursor_to_existing_sync_table() -> Result<(), AppError> {
+        // 真实升级路径：v17 库带旧 DDL 的 session_log_sync（无字节游标列，
+        // 字节游标曾短暂搭 v17 车、已执行过 v17 的开发库正是这个形状）
+        // 与存量游标行，迁移后列补上、存量行保持 NULL（首轮按行号转换）
+        let conn = Connection::open_in_memory()?;
+        conn.execute_batch(
+            "CREATE TABLE session_log_sync (
+                file_path TEXT PRIMARY KEY,
+                last_modified INTEGER NOT NULL,
+                last_line_offset INTEGER NOT NULL DEFAULT 0,
+                last_synced_at INTEGER NOT NULL
+             );
+             INSERT INTO session_log_sync VALUES ('/tmp/a.jsonl', 5, 3, 1);",
+        )?;
+        Database::set_user_version(&conn, 17)?;
+
+        Database::apply_schema_migrations_on_conn(&conn)?;
+
+        assert!(Database::has_column(
+            &conn,
+            "session_log_sync",
+            "last_byte_offset"
+        )?);
+        assert!(Database::has_column(
+            &conn,
+            "session_log_sync",
+            "last_tail_fingerprint"
+        )?);
+        let (byte_offset, fingerprint): (Option<i64>, Option<i64>) = conn.query_row(
+            "SELECT last_byte_offset, last_tail_fingerprint
+             FROM session_log_sync WHERE file_path = '/tmp/a.jsonl'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        assert_eq!(byte_offset, None, "存量行的字节游标必须为 NULL");
+        assert_eq!(fingerprint, None, "存量行的尾部指纹必须为 NULL");
         Ok(())
     }
 }

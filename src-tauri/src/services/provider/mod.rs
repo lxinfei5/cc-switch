@@ -768,10 +768,10 @@ mod tests {
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed",
                         "managed-access-token",
-                        Some("managed-id-token"),
+                        "managed-user",
                     )
                     .await
                     .expect("seed managed account");
@@ -2391,10 +2391,10 @@ requires_openai_auth = true
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed",
                         "managed-token",
-                        Some("managed-id-token"),
+                        "managed-user",
                     )
                     .await
                     .expect("seed managed Codex OAuth account");
@@ -2458,10 +2458,10 @@ requires_openai_auth = true
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed",
                         "managed-token",
-                        Some("managed-id-token"),
+                        "managed-user",
                     )
                     .await
                     .expect("seed managed Codex OAuth account");
@@ -2521,10 +2521,11 @@ requires_openai_auth = true
             // Simulate a bare Codex CLI self-refresh. The app marker still
             // describes the pre-refresh write, while both access and refresh
             // token material on disk have rotated.
+            let rotated_id_token = crate::codex_config::test_codex_id_token("managed-user");
             let rotated_live_auth = crate::codex_config::codex_managed_oauth_auth_value(
                 "acct-managed",
                 "cli-rotated-access",
-                Some("cli-rotated-id"),
+                Some(&rotated_id_token),
                 "cli-rotated-refresh",
                 "2099-01-02T03:04:05Z",
             );
@@ -2573,20 +2574,12 @@ requires_openai_auth = true
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
-                        "acct-a",
-                        "managed-access-a",
-                        Some("managed-id-a"),
-                    )
+                    .add_test_account_with_user_identity("acct-a", "managed-access-a", "user-a")
                     .await
                     .expect("seed account A");
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
-                        "acct-b",
-                        "managed-access-b",
-                        Some("managed-id-b"),
-                    )
+                    .add_test_account_with_user_identity("acct-b", "managed-access-b", "user-b")
                     .await
                     .expect("seed account B");
             });
@@ -2617,12 +2610,13 @@ wire_api = "responses"
 
             ProviderService::switch(state, AppType::Codex, &provider_a.id)
                 .expect("activate managed A");
+            let id_token_a = crate::codex_config::test_codex_id_token("user-a");
             write_json_file(
                 &crate::codex_config::get_codex_auth_path(),
                 &crate::codex_config::codex_managed_oauth_auth_value(
                     "acct-a",
                     "cli-access-a1",
-                    Some("cli-id-a1"),
+                    Some(&id_token_a),
                     "cli-refresh-a1",
                     "2099-01-02T00:00:00Z",
                 ),
@@ -2648,12 +2642,13 @@ wire_api = "responses"
                 Some("acct-b")
             );
 
+            let id_token_b = crate::codex_config::test_codex_id_token("user-b");
             write_json_file(
                 &crate::codex_config::get_codex_auth_path(),
                 &crate::codex_config::codex_managed_oauth_auth_value(
                     "acct-b",
                     "cli-access-b1",
-                    Some("cli-id-b1"),
+                    Some(&id_token_b),
                     "cli-refresh-b1",
                     "2099-01-03T00:00:00Z",
                 ),
@@ -2670,16 +2665,17 @@ wire_api = "responses"
                 )
                 .as_deref(),
                 Some("cli-refresh-b1"),
-                "B's CLI generation must be adopted before third-party auth overwrites auth.json"
+                "B's CLI generation must be adopted before the third-party switch removes auth.json"
             );
-            let live_third_party: Value =
-                read_json_file(&crate::codex_config::get_codex_auth_path())
-                    .expect("read third-party auth");
-            assert_eq!(
-                live_third_party
-                    .get("OPENAI_API_KEY")
-                    .and_then(Value::as_str),
-                Some("sk-third-party")
+            assert!(
+                !crate::codex_config::get_codex_auth_path().exists(),
+                "third-party switches are config-only: auth.json is removed"
+            );
+            let live_config = std::fs::read_to_string(crate::codex_config::get_codex_config_path())
+                .expect("read third-party config");
+            assert!(
+                live_config.contains("experimental_bearer_token = \"sk-third-party\""),
+                "the third-party key rides in config.toml; got:\n{live_config}"
             );
         });
     }
@@ -2692,20 +2688,12 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
-                        "acct-a",
-                        "managed-access-a",
-                        Some("managed-id-a"),
-                    )
+                    .add_test_account_with_user_identity("acct-a", "managed-access-a", "user-a")
                     .await
                     .expect("seed account A");
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
-                        "acct-b",
-                        "managed-access-b",
-                        Some("managed-id-b"),
-                    )
+                    .add_test_account_with_user_identity("acct-b", "managed-access-b", "user-b")
                     .await
                     .expect("seed account B");
             });
@@ -2724,12 +2712,13 @@ wire_api = "responses"
                 "direct update precondition requires no takeover backup"
             );
 
+            let id_token_a = crate::codex_config::test_codex_id_token("user-a");
             write_json_file(
                 &crate::codex_config::get_codex_auth_path(),
                 &crate::codex_config::codex_managed_oauth_auth_value(
                     "acct-a",
                     "cli-access-a1",
-                    Some("cli-id-a1"),
+                    Some(&id_token_a),
                     "cli-refresh-a1",
                     "2099-03-01T00:00:00Z",
                 ),
@@ -2801,10 +2790,10 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed",
                         "managed-access",
-                        Some("managed-id"),
+                        "managed-user",
                     )
                     .await
                     .expect("seed managed account");
@@ -2827,10 +2816,11 @@ wire_api = "responses"
                     .codex_oauth_manager
                     .test_set_token_updated_at_ms("acct-managed", 1_700_000_000_000),
             );
+            let id_token = crate::codex_config::test_codex_id_token("managed-user");
             let cli_live_auth = crate::codex_config::codex_managed_oauth_auth_value(
                 "acct-managed",
                 "cli-access-r1",
-                Some("cli-id-r1"),
+                Some(&id_token),
                 "cli-refresh-r1",
                 "2023-11-14T22:13:20Z",
             );
@@ -2885,10 +2875,10 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-legacy",
                         "managed-access",
-                        Some("managed-id"),
+                        "legacy-user",
                     )
                     .await
                     .expect("seed managed account");
@@ -2919,10 +2909,11 @@ wire_api = "responses"
                     .codex_oauth_manager
                     .test_set_token_updated_at_ms("acct-legacy", 0),
             );
+            let id_token = crate::codex_config::test_codex_id_token("legacy-user");
             let cli_live_auth = crate::codex_config::codex_managed_oauth_auth_value(
                 "acct-legacy",
                 "cli-access-r1",
-                Some("cli-id-r1"),
+                Some(&id_token),
                 "cli-refresh-r1",
                 "2023-11-14T22:13:20Z",
             );
@@ -2976,10 +2967,10 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed",
                         "managed-access",
-                        Some("managed-id"),
+                        "managed-user",
                     )
                     .await
                     .expect("seed managed account");
@@ -3021,10 +3012,10 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed",
                         "managed-access-2",
-                        Some("managed-id-2"),
+                        "managed-user",
                     )
                     .await
                     .expect("re-login managed account");
@@ -3052,10 +3043,10 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed",
                         "managed-access",
-                        Some("managed-id"),
+                        "managed-user",
                     )
                     .await
                     .expect("seed managed account");
@@ -3107,10 +3098,10 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed",
                         "managed-access",
-                        Some("managed-id"),
+                        "managed-user",
                     )
                     .await
                     .expect("seed managed account");
@@ -3177,19 +3168,19 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed-a",
                         "managed-token-a",
-                        Some("managed-id-token-a"),
+                        "user-a",
                     )
                     .await
                     .expect("seed first managed Codex OAuth account");
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed-b",
                         "managed-token-b",
-                        Some("managed-id-token-b"),
+                        "user-b",
                     )
                     .await
                     .expect("seed second managed Codex OAuth account");
@@ -3309,19 +3300,19 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed-a",
                         "managed-token-a",
-                        Some("managed-id-a"),
+                        "user-a",
                     )
                     .await
                     .expect("seed managed account A");
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed-b",
                         "managed-token-b",
-                        Some("managed-id-b"),
+                        "user-b",
                     )
                     .await
                     .expect("seed managed account B");
@@ -3459,19 +3450,19 @@ wire_api = "responses"
             tauri::async_runtime::block_on(async {
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed-a",
                         "managed-token-a",
-                        Some("managed-id-a"),
+                        "user-a",
                     )
                     .await
                     .expect("seed managed account A");
                 state
                     .codex_oauth_manager
-                    .add_test_account_with_access_token(
+                    .add_test_account_with_user_identity(
                         "acct-managed-b",
                         "managed-token-b",
-                        Some("managed-id-b"),
+                        "user-b",
                     )
                     .await
                     .expect("seed managed account B");
@@ -3603,10 +3594,15 @@ wire_api = "responses"
             crate::settings::reload_settings().expect("reload settings");
 
             // 基线：一个普通第三方 provider，可正常切换，作为初始 current。
+            // config 必须带自定义 provider 表：config-only 切换要求 key 有
+            // provider 级落点。
             let mut baseline = Provider::with_id(
                 "baseline".to_string(),
                 "Baseline".to_string(),
-                json!({ "auth": { "OPENAI_API_KEY": "sk-baseline" }, "config": "" }),
+                json!({
+                    "auth": { "OPENAI_API_KEY": "sk-baseline" },
+                    "config": "model_provider = \"baseline\"\n[model_providers.baseline]\nbase_url = \"https://baseline.example/v1\"\n"
+                }),
                 None,
             );
             baseline.category = Some("custom".to_string());
@@ -5321,6 +5317,15 @@ impl ProviderService {
                 ));
             }
         } else {
+            // Codex: validate the live projection before committing current —
+            // the write-layer safety gates can refuse the switch, and a
+            // refusal after current moved would let the next switch backfill
+            // the old live config into the new provider's DB row. (The
+            // managed branch above has its own snapshot rollback instead.)
+            if matches!(app_type, AppType::Codex) && preflighted_provider.is_none() {
+                live::preflight_codex_live_write_for_state(state, provider)?;
+            }
+
             // Additive mode apps skip setting is_current (no such concept).
             if !app_type.is_additive_mode() {
                 crate::settings::set_current_provider(&app_type, Some(id))?;
@@ -5360,6 +5365,23 @@ impl ProviderService {
                 Ok(false) => {}
                 Err(e) => log::warn!("Failed to clean stale Codex auth.json: {e}"),
             }
+        }
+        // Third-party dual of the block above: with preservation off, the
+        // config-only write is expected to delete auth.json. A deletion
+        // failure (read-only dir, ACL, file lock) must not fail the switch —
+        // config and current are already committed — but the user has to see
+        // that the official login is still on disk, so surface it as a
+        // switch warning instead of only a log line.
+        if matches!(app_type, AppType::Codex)
+            && provider.category.as_deref() != Some("official")
+            && !crate::proxy::providers::is_codex_official_provider(provider)
+            && !crate::settings::preserve_codex_official_auth_on_switch()
+            && crate::codex_config::get_codex_auth_path().exists()
+        {
+            log::warn!("Codex auth.json still present after a preservation-off third-party switch");
+            result
+                .warnings
+                .push("codex_auth_cleanup_failed".to_string());
         }
         // Hermes is additive, so "switching" doesn't overwrite a live config file
         // — we instead update the top-level `model:` section to point at this

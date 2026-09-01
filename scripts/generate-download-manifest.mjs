@@ -45,8 +45,8 @@ const normalizedBase = baseUrl.replace(/\/+$/, '');
 const files = [];
 
 for (const name of readdirSync(assetsDir).sort()) {
-  // Unmatched files (.sig, .tar.gz updater artifacts, latest.json) are
-  // deliberately skipped — they are not user-facing downloads.
+  // Unmatched files are deliberately skipped — they are not user-facing
+  // downloads.
   const rule = RULES.find((entry) => name.endsWith(entry.suffix));
   if (!rule) continue;
   const path = join(assetsDir, name);

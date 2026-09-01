@@ -2,7 +2,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { DatabaseUpgrade } from "./components/DatabaseUpgrade";
-import { UpdateProvider } from "./contexts/UpdateContext";
 import "./index.css";
 // 字体：英文 Monaco、中文微软雅黑；字号档位见 tailwind.config.cjs fontSize。
 // 参考/紧急覆盖说明：src/fonts/custom-fonts.css
@@ -124,10 +123,8 @@ async function bootstrap() {
       <FrontendErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider defaultTheme="system" storageKey="cc-switch-theme">
-            <UpdateProvider>
-              <App />
-              <Toaster />
-            </UpdateProvider>
+            <App />
+            <Toaster />
           </ThemeProvider>
         </QueryClientProvider>
       </FrontendErrorBoundary>

@@ -254,7 +254,7 @@ Modern AI-powered coding relies on tools like Claude Code, Claude Desktop, Codex
 
 - **Cloud sync** — Custom config directory (Dropbox, OneDrive, iCloud, NAS) and WebDAV server sync
 - **Deep Link** (`ccswitch://`) — Import providers, MCP servers, prompts, and skills via URL
-- Dark / Light / System theme, auto-launch, auto-updater, atomic writes, auto-backups, i18n (zh/zh-TW/en/ja)
+- Dark / Light / System theme, auto-launch, manual fork-controlled updates, atomic writes, auto-backups, i18n (zh/zh-TW/en/ja)
 
 ## FAQ
 

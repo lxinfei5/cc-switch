@@ -7,7 +7,7 @@ export const iconMetadata: Record<string, IconMetadata> = {
     displayName: "9527CODE",
     category: "ai-provider",
     keywords: ["9527code", "9527", "codes", "aggregator", "relay", "gateway"],
-    defaultColor: "#4F46E5",
+    defaultColor: "currentColor",
   },
   a6api: {
     name: "a6api",

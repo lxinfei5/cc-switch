@@ -489,7 +489,6 @@ export const hermesProviderPresets: HermesProviderPreset[] = [
     isPartner: true,
     partnerPromotionKey: "9527code",
     icon: "9527code",
-    iconColor: "#4F46E5",
     suggestedDefaults: {
       model: { default: "claude-opus-5", provider: "9527code" },
     },

@@ -376,7 +376,6 @@ export const providerPresets: ProviderPreset[] = [
     isPartner: true,
     partnerPromotionKey: "9527code",
     icon: "9527code",
-    iconColor: "#4F46E5",
   },
   {
     name: "ClaudeAPI",

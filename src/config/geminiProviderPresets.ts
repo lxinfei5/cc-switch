@@ -260,7 +260,6 @@ export const geminiProviderPresets: GeminiProviderPreset[] = [
       "https://cdn.9527.codes",
     ],
     icon: "9527code",
-    iconColor: "#4F46E5",
   },
   {
     name: "Code0",

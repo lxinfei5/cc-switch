@@ -720,7 +720,6 @@ export const openclawProviderPresets: OpenClawProviderPreset[] = [
     isPartner: true,
     partnerPromotionKey: "9527code",
     icon: "9527code",
-    iconColor: "#4F46E5",
     templateValues: {
       apiKey: {
         label: "API Key",

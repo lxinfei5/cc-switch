@@ -22,6 +22,27 @@
 /// 前端 `src/types/usage.ts` 的同名常量是跨语言的对应物，改动须同步。
 pub(crate) const CACHE_INCLUSIVE_APP_TYPES: &[&str] = &["codex", "gemini", "grokbuild"];
 
+/// Session-importer placeholder `provider_id`s. One list for name COALESCE,
+/// is-deleted, archive reconcile, and TPS is-deleted. New session sources
+/// must be added here — do not hand-edit sibling SQL `IN (...)` fragments.
+pub(crate) const SESSION_PLACEHOLDER_PROVIDER_IDS: &[&str] = &[
+    "_session",
+    "_codex_session",
+    "_gemini_session",
+    "_opencode_session",
+    "_grok_session",
+    "_pi_session",
+    "_antigravity_session",
+];
+
+pub(crate) fn sql_quoted_list(items: &[&str]) -> String {
+    items
+        .iter()
+        .map(|item| format!("'{item}'"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// `app_type` 的存储 `input_tokens` 是否已包含 cache read/write。
 pub(crate) fn is_cache_inclusive_app(app_type: &str) -> bool {
     CACHE_INCLUSIVE_APP_TYPES.contains(&app_type)

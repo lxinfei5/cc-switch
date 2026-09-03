@@ -180,11 +180,7 @@ impl Database {
     /// 仅取 provider 展示名（轻量查询，供 TPS 写入侧冗余名字用）。
     ///
     /// provider 已删除时返回 None，调用方据此回退到 provider_id。
-    pub fn get_provider_name(
-        &self,
-        id: &str,
-        app_type: &str,
-    ) -> Result<Option<String>, AppError> {
+    pub fn get_provider_name(&self, id: &str, app_type: &str) -> Result<Option<String>, AppError> {
         let conn = lock_conn!(self.conn);
         conn.query_row(
             "SELECT name FROM providers WHERE id = ?1 AND app_type = ?2",

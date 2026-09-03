@@ -167,6 +167,30 @@ describe("UsageDashboard", () => {
     expect(screen.getByTestId("select-5000")).toBeInTheDocument();
   });
 
+  it("filters usage queries to Antigravity", async () => {
+    renderDashboard();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "usage.appFilter.antigravity" }),
+    );
+
+    await waitFor(() =>
+      expect(useProviderStatsMock).toHaveBeenLastCalledWith(
+        expect.anything(),
+        { appType: "antigravity" },
+        expect.anything(),
+      ),
+    );
+    expect(useModelStatsMock).toHaveBeenLastCalledWith(
+      expect.anything(),
+      { appType: "antigravity", providerName: undefined },
+      expect.anything(),
+    );
+    expect(usageHeroMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ appType: "antigravity" }),
+    );
+  });
+
   it("filters usage queries to Pi", async () => {
     renderDashboard();
 

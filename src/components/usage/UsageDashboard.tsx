@@ -76,6 +76,7 @@ const APP_FILTER_ICON: Record<AppType, string> = {
   grokbuild: "grok",
   opencode: "opencode",
   pi: "pi",
+  antigravity: "gemini",
 };
 
 // Select 的 "all" 哨兵和用户自定义名称同处一个值域——真有来源/模型叫 "all"
@@ -531,7 +532,11 @@ export function UsageDashboard({
           </div>
         </div>
 
-        <Accordion type="multiple" defaultValue={[]} className="w-full space-y-4">
+        <Accordion
+          type="multiple"
+          defaultValue={[]}
+          className="w-full space-y-4"
+        >
           <AccordionItem
             value="pricing"
             className="rounded-xl glass-card overflow-hidden"
@@ -540,10 +545,10 @@ export function UsageDashboard({
               <div className="flex items-center gap-3">
                 <Coins className="h-5 w-5 text-yellow-500" />
                 <div className="text-left">
-                <h3 className="text-lg font-semibold">
+                  <h3 className="text-lg font-semibold">
                     {t("settings.advanced.pricing.title")}
                   </h3>
-                <p className="text-xs text-muted-foreground font-normal">
+                  <p className="text-xs text-muted-foreground font-normal">
                     {t("settings.advanced.pricing.description")}
                   </p>
                 </div>
@@ -561,10 +566,10 @@ export function UsageDashboard({
               <div className="flex items-center gap-3">
                 <DatabaseBackup className="h-5 w-5 text-orange-500" />
                 <div className="text-left">
-                <h3 className="text-lg font-semibold">
+                  <h3 className="text-lg font-semibold">
                     {t("usage.rebuildCodex.title")}
                   </h3>
-                <p className="text-xs text-muted-foreground font-normal">
+                  <p className="text-xs text-muted-foreground font-normal">
                     {t("usage.rebuildCodex.description")}
                   </p>
                 </div>

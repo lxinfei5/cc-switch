@@ -190,8 +190,9 @@ export interface UsageRangeSelection {
  * Desktop's full usage. The backend collapses `claude-desktop → claude` in
  * every dashboard query (see `folded_app_type_sql`).
  * `opencode` and `pi` have no proxy handler; their usage reaches this
- * dashboard through session importers. `openclaw` / `hermes` appear only as
- * managed apps elsewhere.
+ * dashboard through session importers. `antigravity` is usage-only: it is
+ * imported from local Antigravity session DBs, not managed as a provider app.
+ * `openclaw` / `hermes` appear only as managed apps elsewhere.
  */
 export type AppType =
   | "claude"
@@ -199,7 +200,8 @@ export type AppType =
   | "gemini"
   | "grokbuild"
   | "opencode"
-  | "pi";
+  | "pi"
+  | "antigravity";
 
 export type AppTypeFilter = "all" | AppType;
 
@@ -210,6 +212,7 @@ export const KNOWN_APP_TYPES: ReadonlyArray<AppType> = [
   "grokbuild",
   "opencode",
   "pi",
+  "antigravity",
 ];
 
 /**
@@ -237,12 +240,18 @@ const PARTIAL_CACHE_WRITE_APP_TYPES: ReadonlySet<string> = new Set(["pi"]);
 
 export type CacheWriteAvailability = "ok" | "partial" | "na";
 
+/** App types that never report cache _creation_ (only reads, or none). */
+const NO_CACHE_WRITE_APP_TYPES: ReadonlySet<string> = new Set([
+  ...CACHE_INCLUSIVE_APP_TYPES,
+  "antigravity",
+]);
+
 export function getCacheWriteAvailability(
   appTypes: readonly string[],
 ): CacheWriteAvailability {
   if (appTypes.length === 0) return "ok";
   const unavailable = appTypes.filter((appType) =>
-    CACHE_INCLUSIVE_APP_TYPES.has(appType),
+    NO_CACHE_WRITE_APP_TYPES.has(appType),
   ).length;
   if (unavailable === appTypes.length) return "na";
   const partial = appTypes.some((appType) =>

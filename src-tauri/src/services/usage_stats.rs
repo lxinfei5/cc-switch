@@ -232,6 +232,7 @@ fn provider_name_coalesce(log_alias: &str, provider_alias: &str) -> String {
          WHEN '_opencode_session' THEN 'OpenCode (Session)' \
          WHEN '_grok_session' THEN 'Grok Build (Session)' \
          WHEN '_pi_session' THEN 'Pi (Session)' \
+         WHEN '_antigravity_session' THEN 'Antigravity (Session)' \
          ELSE {log_alias}.provider_id END)"
     )
 }
@@ -245,9 +246,12 @@ fn provider_name_coalesce(log_alias: &str, provider_alias: &str) -> String {
 /// 已删除 provider 的名字由 [`provider_name_coalesce`] 经归档表解析，本表达式只负责
 /// 给出「已删除」事实，供前端做删除视觉（删除线/灰化/徽标）。
 fn provider_is_deleted_sql(log_alias: &str, provider_alias: &str) -> String {
+    let placeholders = crate::services::sql_helpers::sql_quoted_list(
+        crate::services::sql_helpers::SESSION_PLACEHOLDER_PROVIDER_IDS,
+    );
     format!(
         "CASE WHEN {provider_alias}.id IS NOT NULL THEN 0 \
-         WHEN {log_alias}.provider_id IN ('_session', '_codex_session', '_gemini_session', '_opencode_session', '_grok_session') THEN 0 \
+         WHEN {log_alias}.provider_id IN ({placeholders}) THEN 0 \
          ELSE 1 END"
     )
 }
@@ -341,7 +345,7 @@ pub(crate) fn effective_usage_log_filter(log_alias: &str) -> String {
         dedup_app_type_match_sql("proxy_dedup.app_type", &format!("{log_alias}.app_type"));
     format!(
         "NOT (
-            {data_source} IN ('session_log', 'codex_session', 'gemini_session', 'opencode_session')
+            {data_source} IN ('session_log', 'codex_session', 'gemini_session', 'opencode_session', 'antigravity_session')
             AND EXISTS (
                 SELECT 1
                 FROM proxy_request_logs proxy_dedup
@@ -356,7 +360,7 @@ pub(crate) fn effective_usage_log_filter(log_alias: &str) -> String {
                       proxy_dedup.cache_creation_tokens = {log_alias}.cache_creation_tokens
                       OR (
                           {log_alias}.cache_creation_tokens = 0
-                          AND {data_source} IN ('codex_session', 'gemini_session', 'opencode_session')
+                          AND {data_source} IN ('codex_session', 'gemini_session', 'opencode_session', 'antigravity_session')
                       )
                   )
                   AND proxy_dedup.created_at BETWEEN
@@ -410,7 +414,11 @@ impl Database {
         let conn = lock_conn!(self.conn);
         // 孤儿判定 + 确定性命名都在 SQL 里完成，三表 UNION 去重后一次性 INSERT OR IGNORE。
         // 会话占位符（_session 等）有专用可读名，不算孤儿，排除在外。
-        let sql = "INSERT OR IGNORE INTO provider_name_archive (provider_id, app_type, name, deleted_at)
+        let placeholders = crate::services::sql_helpers::sql_quoted_list(
+            crate::services::sql_helpers::SESSION_PLACEHOLDER_PROVIDER_IDS,
+        );
+        let sql = format!(
+            "INSERT OR IGNORE INTO provider_name_archive (provider_id, app_type, name, deleted_at)
              SELECT provider_id, app_type,
                     '已删除供应商·' || UPPER(SUBSTR(provider_id, 1, 8)),
                     ?1
@@ -421,7 +429,7 @@ impl Database {
                  UNION
                  SELECT provider_id, app_type FROM tps_samples
              ) orphan
-             WHERE provider_id NOT IN ('_session', '_codex_session', '_gemini_session', '_opencode_session', '_grok_session')
+             WHERE provider_id NOT IN ({placeholders})
                AND NOT EXISTS (
                      SELECT 1 FROM providers p
                      WHERE p.id = orphan.provider_id AND p.app_type = orphan.app_type
@@ -429,9 +437,10 @@ impl Database {
                AND NOT EXISTS (
                      SELECT 1 FROM provider_name_archive a
                      WHERE a.provider_id = orphan.provider_id AND a.app_type = orphan.app_type
-                 )";
+                 )"
+        );
         let n = conn
-            .execute(sql, params![chrono::Utc::now().timestamp()])
+            .execute(&sql, params![chrono::Utc::now().timestamp()])
             .map_err(|e| AppError::Database(format!("自愈 provider 名字归档失败: {e}")))?;
         if n > 0 {
             log::info!("已为 {n} 个此前删除的 provider 回填可读归档名（自愈）");
@@ -439,7 +448,6 @@ impl Database {
         Ok(n as u64)
     }
 }
-
 
 /// session 日志写入前的统一去重判定。
 ///
@@ -4463,19 +4471,8 @@ mod tests {
                 [],
             )?;
             insert_usage_log(
-                &conn,
-                "req-gone",
-                "claude",
-                "p-gone",
-                "claude-3",
-                "proxy",
-                1000,
-                100,
-                50,
-                0,
-                0,
-                200,
-                "0.01",
+                &conn, "req-gone", "claude", "p-gone", "claude-3", "proxy", 1000, 100, 50, 0, 0,
+                200, "0.01",
             )?;
         }
 
@@ -4510,8 +4507,8 @@ mod tests {
     /// `reconcile_provider_name_archive` 应在读统计前为其回填确定性的可读归档名，
     /// 并把它标记为已删除（前端据此做删除视觉）。
     #[test]
-    fn reconcile_backfills_pre_fix_deleted_provider_with_deterministic_name(
-    ) -> Result<(), AppError> {
+    fn reconcile_backfills_pre_fix_deleted_provider_with_deterministic_name() -> Result<(), AppError>
+    {
         let db = Database::memory()?;
 
         // 直接写入一条引用「已删除 provider」的日志，但**不**走 delete_provider
@@ -4589,8 +4586,19 @@ mod tests {
             )?;
             // 会话占位行（_session）：有专用可读名，不算已删除
             insert_usage_log(
-                &conn, "req-sess", "claude", "_session", "claude-3", "session_log", 1000, 100, 50,
-                0, 0, 200, "0.01",
+                &conn,
+                "req-sess",
+                "claude",
+                "_session",
+                "claude-3",
+                "session_log",
+                1000,
+                100,
+                50,
+                0,
+                0,
+                200,
+                "0.01",
             )?;
         }
 
@@ -4599,7 +4607,10 @@ mod tests {
             .iter()
             .find(|s| s.provider_id == "p-live")
             .expect("应有 live 行");
-        assert!(!live.provider_is_deleted, "仍在用的 provider 不应标记为已删除");
+        assert!(
+            !live.provider_is_deleted,
+            "仍在用的 provider 不应标记为已删除"
+        );
         assert_eq!(live.provider_name, "Live Provider");
 
         // 会话占位行在统计里可能被跨源去重折叠，直接在 SQL 层校验其 is_deleted = 0

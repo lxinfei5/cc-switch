@@ -96,7 +96,9 @@ export function RequestDetailPanel({
                 </dt>
                 <dd className="text-sm">
                   <ProviderName
-                    name={request.providerName || t("usage.unknownProvider", "未知")}
+                    name={
+                      request.providerName || t("usage.unknownProvider", "未知")
+                    }
                     isDeleted={request.providerIsDeleted}
                     className="font-medium"
                   />
@@ -122,9 +124,7 @@ export function RequestDetailPanel({
                       <dt className="mt-1 text-muted-foreground">
                         {t("usage.requestModel", "请求模型")}
                       </dt>
-                      <dd className="text-sm">
-                        {request.requestModel}
-                      </dd>
+                      <dd className="text-sm">{request.requestModel}</dd>
                     </>
                   )}
                 {request.pricingModel &&
@@ -133,9 +133,7 @@ export function RequestDetailPanel({
                       <dt className="mt-1 text-muted-foreground">
                         {t("usage.pricingModel", "计价模型")}
                       </dt>
-                      <dd className="text-sm">
-                        {request.pricingModel}
-                      </dd>
+                      <dd className="text-sm">{request.pricingModel}</dd>
                     </>
                   )}
               </div>
@@ -270,7 +268,9 @@ export function RequestDetailPanel({
                     <dt className="text-muted-foreground">
                       {t("usage.costMultiplier", "成本倍率")}
                     </dt>
-                    <dd className="tnum break-all">×{request.costMultiplier}</dd>
+                    <dd className="tnum break-all">
+                      ×{request.costMultiplier}
+                    </dd>
                   </div>
                 )}
               <div

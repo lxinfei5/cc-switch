@@ -419,6 +419,9 @@ impl Database {
         // 展示名优先级：实时 JOIN 的 providers.name（改名即时生效）→ 写入时冗余的
         // provider_name → 删除时归档的 provider_name_archive 名 → 兜底 provider_id。
         // is_deleted：既无实时 provider 也无归档名（且非会话占位）即为已删除。
+        let placeholders = crate::services::sql_helpers::sql_quoted_list(
+            crate::services::sql_helpers::SESSION_PLACEHOLDER_PROVIDER_IDS,
+        );
         let agg_sql = format!(
             "SELECT t.app_type, t.provider_id,
                     COALESCE(p.name, t.provider_name,
@@ -426,7 +429,7 @@ impl Database {
                               WHERE a.provider_id = t.provider_id AND a.app_type = t.app_type),
                              t.provider_id),
                     CASE WHEN p.id IS NOT NULL THEN 0
-                         WHEN t.provider_id IN ('_session','_codex_session','_gemini_session','_opencode_session','_grok_session') THEN 0
+                         WHEN t.provider_id IN ({placeholders}) THEN 0
                          ELSE 1 END,
                     COUNT(*),
                     COALESCE(AVG(CASE WHEN t.tps > 0 THEN t.tps END), 0),
@@ -640,13 +643,26 @@ mod tests {
 
         let rows = db.get_tps_breakdown(&TpsFilters::default(), TpsGroupBy::Provider)?;
 
-        let orphan = rows.iter().find(|r| r.key == "prov-old").expect("应有孤儿行");
-        assert_eq!(orphan.display_name.as_deref(), Some("已删除供应商·PROV-OLD"));
+        let orphan = rows
+            .iter()
+            .find(|r| r.key == "prov-old")
+            .expect("应有孤儿行");
+        assert_eq!(
+            orphan.display_name.as_deref(),
+            Some("已删除供应商·PROV-OLD")
+        );
         assert_eq!(orphan.is_deleted, Some(true), "孤儿应标记为已删除");
 
-        let live = rows.iter().find(|r| r.key == "prov-live").expect("应有 live 行");
+        let live = rows
+            .iter()
+            .find(|r| r.key == "prov-live")
+            .expect("应有 live 行");
         assert_eq!(live.display_name.as_deref(), Some("Live Provider"));
-        assert_eq!(live.is_deleted, Some(false), "仍在用的 provider 不应标记为已删除");
+        assert_eq!(
+            live.is_deleted,
+            Some(false),
+            "仍在用的 provider 不应标记为已删除"
+        );
 
         Ok(())
     }

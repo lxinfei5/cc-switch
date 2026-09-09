@@ -594,12 +594,16 @@ impl Database {
                         Self::set_user_version(conn, 17)?;
                     }
                     17 => {
-                        log::info!("迁移数据库从 v17 到 v18（补齐 TPS Provider 名称与会话字节游标）");
+                        log::info!(
+                            "迁移数据库从 v17 到 v18（补齐 TPS Provider 名称与会话字节游标）"
+                        );
                         Self::migrate_v17_to_v18(conn)?;
                         Self::set_user_version(conn, 18)?;
                     }
                     18 => {
-                        log::info!("迁移数据库从 v18 到 v19（补齐 TPS Provider 名称与会话用量去重账本）");
+                        log::info!(
+                            "迁移数据库从 v18 到 v19（补齐 TPS Provider 名称与会话用量去重账本）"
+                        );
                         Self::migrate_v18_to_v19(conn)?;
                         Self::set_user_version(conn, 19)?;
                     }
@@ -1702,7 +1706,11 @@ impl Database {
                  )",
                 [],
             )
-            .map_err(|e| AppError::Database(format!("v17 -> v18 回填 tps_samples.provider_name 失败: {e}")))?;
+            .map_err(|e| {
+                AppError::Database(format!(
+                    "v17 -> v18 回填 tps_samples.provider_name 失败: {e}"
+                ))
+            })?;
             // 创建 Provider 名称归档表：删除时快照名字，供 Usage / TPS 读侧兜底展示。
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS provider_name_archive (
@@ -1714,7 +1722,9 @@ impl Database {
                 )",
                 [],
             )
-            .map_err(|e| AppError::Database(format!("v17 -> v18 创建 provider_name_archive 表失败: {e}")))?;
+            .map_err(|e| {
+                AppError::Database(format!("v17 -> v18 创建 provider_name_archive 表失败: {e}"))
+            })?;
         }
 
         // upstream 的 v17->v18 迁移与本地 v17->v18 使用了同一个版本号；
@@ -2175,6 +2185,17 @@ impl Database {
             (
                 "gemini-3.7-flash",
                 "Gemini 3.7 Flash",
+                "0.75",
+                "3.75",
+                "0.075",
+                "0",
+            ),
+            // Gemini 3.8 Flash：2026-09-02 介绍价与 3.7 Flash 相同
+            // （$0.75/$3.75/$0.075），同样 2026-12-31 到期。Antigravity CLI
+            // 本机会话几乎全是这个 id；不 seed 则用量行 token 可见、成本为 0。
+            (
+                "gemini-3.8-flash",
+                "Gemini 3.8 Flash",
                 "0.75",
                 "3.75",
                 "0.075",
@@ -3861,8 +3882,9 @@ mod tests {
         assert!(Database::table_exists(&conn, "provider_name_archive")?);
         assert!(Database::table_exists(&conn, "session_usage_dedup")?);
         let names: Vec<(String, Option<String>)> = {
-            let mut stmt =
-                conn.prepare("SELECT provider_id, provider_name FROM tps_samples ORDER BY request_id")?;
+            let mut stmt = conn.prepare(
+                "SELECT provider_id, provider_name FROM tps_samples ORDER BY request_id",
+            )?;
             let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
             rows.collect::<Result<_, _>>()?
         };

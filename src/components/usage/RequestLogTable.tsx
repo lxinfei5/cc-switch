@@ -212,7 +212,9 @@ export function RequestLogTable({
                         </TableCell>
                         <TableCell className="text-center max-w-[140px] truncate">
                           <ProviderName
-                            name={log.providerName || t("usage.unknownProvider")}
+                            name={
+                              log.providerName || t("usage.unknownProvider")
+                            }
                             isDeleted={log.providerIsDeleted}
                             title={log.providerId}
                           />

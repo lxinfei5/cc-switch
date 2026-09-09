@@ -19,7 +19,12 @@ interface ProviderNameProps {
  * 「仍在用的 provider」与「已删除、只剩历史数据的 provider」，已删除者
  * 渲染为：灰化 + 删除线的名字，后跟一个「已删除」中性徽标。
  */
-export function ProviderName({ name, isDeleted, title, className }: ProviderNameProps) {
+export function ProviderName({
+  name,
+  isDeleted,
+  title,
+  className,
+}: ProviderNameProps) {
   const { t } = useTranslation();
 
   if (!isDeleted) {
@@ -31,7 +36,10 @@ export function ProviderName({ name, isDeleted, title, className }: ProviderName
   }
 
   return (
-    <span className={cn("inline-flex items-center gap-1.5", className)} title={title ?? name}>
+    <span
+      className={cn("inline-flex items-center gap-1.5", className)}
+      title={title ?? name}
+    >
       <span className="text-muted-foreground line-through decoration-muted-foreground/60">
         {name}
       </span>

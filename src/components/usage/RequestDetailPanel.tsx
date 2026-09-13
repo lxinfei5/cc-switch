@@ -8,6 +8,7 @@ import {
 import { useRequestDetail } from "@/lib/query/usage";
 import { ProviderName } from "./ProviderName";
 import { getFreshInputTokens, isUnpricedUsage } from "@/types/usage";
+import { formatOutputTokensPerSecond } from "./format";
 
 interface RequestDetailPanelProps {
   requestId: string;
@@ -57,6 +58,7 @@ export function RequestDetailPanel({
   const freshInput = getFreshInputTokens(request);
   const isCacheInclusive = request.inputTokens !== freshInput;
   const unpriced = isUnpricedUsage(request);
+  const outputTps = formatOutputTokensPerSecond(request);
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -182,6 +184,11 @@ export function RequestDetailPanel({
                 </dt>
                 <dd className="tnum break-all">
                   {request.outputTokens.toLocaleString()}
+                  {outputTps != null && (
+                    <span className="ml-2 text-xs text-muted-foreground font-normal">
+                      ({outputTps} tps)
+                    </span>
+                  )}
                 </dd>
               </div>
               <div>

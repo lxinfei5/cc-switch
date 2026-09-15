@@ -67,6 +67,7 @@ impl Database {
             enabled_claude BOOLEAN NOT NULL DEFAULT 0, enabled_codex BOOLEAN NOT NULL DEFAULT 0,
             enabled_gemini BOOLEAN NOT NULL DEFAULT 0, enabled_grokbuild BOOLEAN NOT NULL DEFAULT 0,
             enabled_opencode BOOLEAN NOT NULL DEFAULT 0,
+            enabled_mcode BOOLEAN NOT NULL DEFAULT 0,
             enabled_hermes BOOLEAN NOT NULL DEFAULT 0
         )",
             [],
@@ -96,6 +97,7 @@ impl Database {
             enabled_gemini BOOLEAN NOT NULL DEFAULT 0,
             enabled_grokbuild BOOLEAN NOT NULL DEFAULT 0,
             enabled_opencode BOOLEAN NOT NULL DEFAULT 0,
+            enabled_mcode BOOLEAN NOT NULL DEFAULT 0,
             enabled_hermes BOOLEAN NOT NULL DEFAULT 0,
             installed_at INTEGER NOT NULL DEFAULT 0,
             content_hash TEXT,
@@ -611,6 +613,11 @@ impl Database {
                         log::info!("迁移数据库从 v19 到 v20（会话日志字节游标列）");
                         Self::migrate_v19_to_v20(conn)?;
                         Self::set_user_version(conn, 20)?;
+                    }
+                    20 => {
+                        log::info!("迁移数据库从 v20 到 v21（MiniMax Code Skills/MCP 启用标记）");
+                        Self::migrate_v20_to_v21(conn)?;
+                        Self::set_user_version(conn, 21)?;
                     }
                     _ => {
                         return Err(AppError::Database(format!(
@@ -1777,6 +1784,21 @@ impl Database {
                 "last_tail_fingerprint",
                 "INTEGER",
             )?;
+        }
+        Ok(())
+    }
+
+    /// v20 -> v21: add MiniMax Code enablement flags to managed Skills/MCP rows.
+    fn migrate_v20_to_v21(conn: &Connection) -> Result<(), AppError> {
+        for table in ["mcp_servers", "skills"] {
+            if Self::table_exists(conn, table)? {
+                Self::add_column_if_missing(
+                    conn,
+                    table,
+                    "enabled_mcode",
+                    "BOOLEAN NOT NULL DEFAULT 0",
+                )?;
+            }
         }
         Ok(())
     }
@@ -4059,6 +4081,33 @@ mod tests {
         )?;
         assert_eq!(byte_offset, None, "存量行的字节游标必须为 NULL");
         assert_eq!(fingerprint, None, "存量行的尾部指纹必须为 NULL");
+        Ok(())
+    }
+
+    #[test]
+    fn migrate_v20_to_v21_adds_mcode_enablement_flags() -> Result<(), AppError> {
+        let conn = Connection::open_in_memory()?;
+        conn.execute_batch(
+            "CREATE TABLE mcp_servers (id TEXT PRIMARY KEY);
+             CREATE TABLE skills (id TEXT PRIMARY KEY);
+             INSERT INTO mcp_servers VALUES ('mcp-1');
+             INSERT INTO skills VALUES ('skill-1');",
+        )?;
+        Database::set_user_version(&conn, 20)?;
+
+        Database::apply_schema_migrations_on_conn(&conn)?;
+
+        assert_eq!(Database::get_user_version(&conn)?, SCHEMA_VERSION);
+        assert!(Database::has_column(&conn, "mcp_servers", "enabled_mcode")?);
+        assert!(Database::has_column(&conn, "skills", "enabled_mcode")?);
+        let flags: (i64, i64) = conn.query_row(
+            "SELECT
+                (SELECT enabled_mcode FROM mcp_servers WHERE id = 'mcp-1'),
+                (SELECT enabled_mcode FROM skills WHERE id = 'skill-1')",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        assert_eq!(flags, (0, 0));
         Ok(())
     }
 }

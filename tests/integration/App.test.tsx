@@ -516,4 +516,96 @@ describe("App integration with MSW", () => {
     },
     APP_TEST_TIMEOUT,
   );
+
+  it(
+    "resets provider view scroll when switching apps",
+    async () => {
+      const { default: App } = await import("@/App");
+      const view = renderApp(App);
+
+      await waitForProviderList(view, "claude-1");
+
+      const mainScrollContainer = view.container.querySelector(
+        "main",
+      ) as HTMLElement;
+      const providerScrollContainer = Array.from(
+        view.container.querySelectorAll<HTMLElement>(".overflow-y-auto"),
+      ).find(
+        (element) =>
+          element !== mainScrollContainer && element.className.includes("pb-8"),
+      );
+
+      expect(mainScrollContainer).not.toBeNull();
+      expect(providerScrollContainer).toBeDefined();
+
+      mainScrollContainer.scrollTop = 320;
+      mainScrollContainer.scrollLeft = 12;
+      providerScrollContainer!.scrollTop = 640;
+      providerScrollContainer!.scrollLeft = 24;
+
+      fireEvent.click(view.getByText("switch-codex"));
+      await waitForProviderList(view, "codex-1");
+
+      expect(mainScrollContainer.scrollTop).toBe(0);
+      expect(mainScrollContainer.scrollLeft).toBe(0);
+      expect(providerScrollContainer!.scrollTop).toBe(0);
+      expect(providerScrollContainer!.scrollLeft).toBe(0);
+    },
+    APP_TEST_TIMEOUT,
+  );
+
+  it(
+    "refreshes MiniMax Code provider membership after removing it from live config",
+    async () => {
+      localStorage.setItem("cc-switch-last-app", "mcode");
+      let liveConfigManaged = true;
+      let providerRequests = 0;
+
+      server.use(
+        http.post("http://tauri.local/get_providers", async ({ request }) => {
+          const { app } = (await request.json()) as { app: string };
+          if (app !== "mcode") return;
+          providerRequests += 1;
+          return HttpResponse.json({
+            custom: {
+              id: "custom",
+              name: "Custom MiniMax Code",
+              settingsConfig: {},
+              meta: { liveConfigManaged },
+            },
+          });
+        }),
+        http.post(
+          "http://tauri.local/remove_provider_from_live_config",
+          async ({ request }) => {
+            expect(await request.json()).toEqual({
+              id: "custom",
+              app: "mcode",
+            });
+            liveConfigManaged = false;
+            return HttpResponse.json(true);
+          },
+        ),
+      );
+
+      const { default: App } = await import("@/App");
+      const view = renderApp(App);
+
+      await waitForProviderList(view, '"liveConfigManaged":true');
+      const requestsBeforeRemoval = providerRequests;
+      fireEvent.click(view.getByText("remove"));
+      fireEvent.click(view.getByText("confirm-delete"));
+
+      await waitFor(() =>
+        expect(view.queryByTestId("confirm-dialog")).not.toBeInTheDocument(),
+      );
+      expect(liveConfigManaged).toBe(false);
+      await waitForProviderList(view, '"liveConfigManaged":false');
+      expect(providerRequests).toBeGreaterThan(requestsBeforeRemoval);
+      expect(view.getByTestId("provider-list")).toHaveTextContent(
+        "Custom MiniMax Code",
+      );
+    },
+    APP_TEST_TIMEOUT,
+  );
 });
